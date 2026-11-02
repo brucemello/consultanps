@@ -9,6 +9,7 @@ Código do Google Apps Script com deploy automático via GitHub Actions.
 | **Deploy Apps Script** | Todo push na `main` que mexa em `src/` (ou manualmente) | `clasp push` + atualiza a implantação `DEPLOYMENT_ID` — a URL do Web App continua a mesma |
 | **Importar do Apps Script** | Manual (aba Actions) | `clasp pull` do editor do Google para `src/` e faz commit |
 | **Verificar Apps Script** | Manual | Compara o código publicado com o repositório |
+| **Diagnóstico de implantações** | Manual | Lista as implantações e mostra qual é o Web App atualizado pelo deploy |
 
 > Evite editar direto no editor do Apps Script: o próximo deploy sobrescreve. Se editar, rode **Importar do Apps Script** antes.
 
@@ -17,7 +18,7 @@ Código do Google Apps Script com deploy automático via GitHub Actions.
 | Tela | Onde abrir | O que faz |
 |---|---|---|
 | **Importador** (`src/Importador.html`) | Menu da planilha → *Importar relatório do Fluig*, ou URL do Web App com `?p=importar` | Mostra os filtros do Fluig, lê o .xlsx/.csv no navegador, exibe prévia (linhas, período, NPS, alertas) e grava na `Base_Historica` sem duplicar |
-| **Dashboard Executivo** (`src/Dashboard.html`) | Menu → *Abrir Dashboard Executivo*, ou URL do Web App | KPIs, NPS por mês, P/N/D, distribuição de notas, causas raiz, achados, termos mais citados, comentários e plano de ação, com filtros de módulo, período, tipo e país |
+| **Dashboard Executivo** (`src/Dashboard.html`) | Menu → *Abrir Dashboard Executivo* (abre em tela grande dentro da planilha), ou URL do Web App | KPIs, NPS por mês, P/N/D, distribuição de notas, causas raiz, achados, termos mais citados, comentários e plano de ação, com filtros de módulo, período, tipo e país |
 
 ## Testes
 

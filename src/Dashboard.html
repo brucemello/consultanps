@@ -265,7 +265,12 @@
   let DB = null, charts = {}, qualiFiltro = { cl: '', busca: '' };
 
   // ---------- carga ----------
-  if (CTX.urlApp) $('btnImportar').href = CTX.urlApp + '?p=importar'; else $('btnImportar').classList.add('hidden');
+  if (CTX.modo === 'dialog') {
+    $('btnImportar').removeAttribute('target');
+    $('btnImportar').href = '#';
+    $('btnImportar').addEventListener('click', e => { e.preventDefault(); google.script.run.mostrarInterfaceUpload(); });
+  } else if (CTX.urlApp) $('btnImportar').href = CTX.urlApp + '?p=importar';
+  else $('btnImportar').classList.add('hidden');
   google.script.run
     .withSuccessHandler(json => { DB = preparar(JSON.parse(json)); iniciarFiltros(); render(); $('loading').classList.add('hidden'); })
     .withFailureHandler(err => { $('loading').innerHTML = `<div class="box">Não foi possível carregar os dados.<br><span class="muted">${esc(err.message)}</span></div>`; })

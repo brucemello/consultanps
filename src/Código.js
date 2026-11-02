@@ -1,10 +1,9 @@
 /**
  * SISTEMA NPS PROTHEUS MULTI-MÓDULO DE INTELIGÊNCIA CX
- * Com Padronização de Cabeçalhos (Módulo / Produto) em TODAS as abas para o Looker Studio
+ * Importação do relatório do Portal de Insights CX (Fluig) + Dashboard Executivo em HTML
  */
 
 const URL_FLUIG = 'https://fluig.totvs.com/portal/p/10097/portal-de-insights-cx-v2';
-const URL_LOOKER = 'https://datastudio.google.com/s/o9eHWdrTIto';
 const URL_MANUAL = 'https://drive.google.com/file/d/1VD3aj2c-KN16bDuOecflMKa4YngtKRNM/view?usp=drive_link';
 
 // Filtros padrão aplicados no Portal de Insights CX (Fluig)
@@ -79,7 +78,6 @@ function onOpen() {
     .addItem('📸 Salvar Snapshot do NPS por Módulo', 'gravarSnapshotNPS')
     .addSeparator()
     .addItem('🌐 Abrir Portal de Insights CX (Fluig)', 'abrirFluig')
-    .addItem('🔗 Abrir Dashboard no Looker Studio', 'abrirLinkLooker')
     .addSeparator()
     .addSubMenu(ui.createMenu('⏰ Lembrete mensal de importação')
       .addItem('Ativar lembrete (1º dia útil)', 'instalarLembreteMensal')
@@ -92,7 +90,7 @@ function onOpen() {
 function doGet(e) {
   const pagina = (e && e.parameter && e.parameter.p) === 'importar' ? 'Importador' : 'Dashboard';
   const t = HtmlService.createTemplateFromFile(pagina);
-  t.contexto = contextoPaginas_();
+  t.contexto = contextoPaginas_('webapp');
   return t.evaluate()
     .setTitle(pagina === 'Importador' ? 'Importador NPS · Protheus' : 'Dashboard Executivo NPS · Protheus')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -103,11 +101,12 @@ function include(nome) {
   return HtmlService.createHtmlOutputFromFile(nome).getContent();
 }
 
-function contextoPaginas_() {
+function contextoPaginas_(modo) {
   let urlApp = '';
   try { urlApp = ScriptApp.getService().getUrl() || ''; } catch (e) { urlApp = ''; }
   const periodo = periodoPadrao_(new Date());
   return JSON.stringify({
+    modo: modo || 'dialog',
     urlApp: urlApp,
     urlFluig: URL_FLUIG,
     urlManual: URL_MANUAL,
@@ -122,28 +121,23 @@ function abrirImportadorAutomatico() {
 
 function mostrarInterfaceUpload() {
   const t = HtmlService.createTemplateFromFile('Importador');
-  t.contexto = contextoPaginas_();
+  t.contexto = contextoPaginas_('dialog');
   const html = t.evaluate().setWidth(920).setHeight(720).setTitle('Importador NPS · Protheus');
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
 
+/** Abre o Dashboard Executivo (HTML) em tela grande dentro da própria planilha. */
 function abrirDashboard() {
-  let url = '';
-  try { url = ScriptApp.getService().getUrl(); } catch (e) { url = ''; }
-  if (!url) {
-    SpreadsheetApp.getUi().alert('O Web App ainda não está implantado. Publique pelo deploy automático do GitHub e tente de novo.');
-    return;
-  }
-  abrirUrl_(url, 'Abrindo o Dashboard Executivo...');
+  const t = HtmlService.createTemplateFromFile('Dashboard');
+  t.contexto = contextoPaginas_('dialog');
+  const html = t.evaluate().setWidth(1600).setHeight(950).setTitle('Dashboard Executivo NPS · Protheus');
+  SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
 
 function abrirFluig() {
   abrirUrl_(URL_FLUIG, 'Redirecionando para o Portal Fluig...');
 }
 
-function abrirLinkLooker() {
-  abrirUrl_(URL_LOOKER, 'Redirecionando para o Looker Studio...');
-}
 
 function abrirUrl_(url, titulo) {
   const html = HtmlService.createHtmlOutput(
@@ -682,8 +676,8 @@ function gerarRelatorioConsolidado() {
   if (!relSheet) relSheet = ss.insertSheet('Relatorio_Consolidado');
   relSheet.clear();
 
-  const headersLooker = [['Módulo / Produto', 'NPS Score', '% Promotores', '% Neutros', '% Detratores', 'Total Respostas', 'Total Comentários']];
-  const rowsLooker = [];
+  const headersRel = [['Módulo / Produto', 'NPS Score', '% Promotores', '% Neutros', '% Detratores', 'Total Respostas', 'Total Comentários']];
+  const rowsRel = [];
 
   for (let mod in consolPorModulo) {
     const st = consolPorModulo[mod];
@@ -691,15 +685,15 @@ function gerarRelatorioConsolidado() {
     const pctNeu = st.respostas > 0 ? (st.neutros / st.respostas) : 0;
     const pctDet = st.respostas > 0 ? (st.detratores / st.respostas) : 0;
     const nps = (pctProm - pctDet) * 100;
-    rowsLooker.push([mod, nps, pctProm, pctNeu, pctDet, st.respostas, st.comentarios]);
+    rowsRel.push([mod, nps, pctProm, pctNeu, pctDet, st.respostas, st.comentarios]);
   }
 
-  relSheet.getRange(1, 1, 1, headersLooker[0].length).setValues(headersLooker).setBackground('#102A43').setFontColor('#FFFFFF').setFontWeight('bold');
-  if (rowsLooker.length > 0) {
-    relSheet.getRange(2, 1, rowsLooker.length, rowsLooker[0].length).setValues(rowsLooker);
-    relSheet.getRange(2, 2, rowsLooker.length, 1).setNumberFormat("0.0");
-    relSheet.getRange(2, 3, rowsLooker.length, 3).setNumberFormat("0.0%");
-    relSheet.getRange(2, 6, rowsLooker.length, 2).setNumberFormat("#,##0");
+  relSheet.getRange(1, 1, 1, headersRel[0].length).setValues(headersRel).setBackground('#102A43').setFontColor('#FFFFFF').setFontWeight('bold');
+  if (rowsRel.length > 0) {
+    relSheet.getRange(2, 1, rowsRel.length, rowsRel[0].length).setValues(rowsRel);
+    relSheet.getRange(2, 2, rowsRel.length, 1).setNumberFormat("0.0");
+    relSheet.getRange(2, 3, rowsRel.length, 3).setNumberFormat("0.0%");
+    relSheet.getRange(2, 6, rowsRel.length, 2).setNumberFormat("#,##0");
   }
 
   let achadosSheet = ss.getSheetByName('Principais_Achados');
