@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f172a; --ink2: #334155; --muted: #64748b; --line: #e5e9f2; --bg: #f3f5fa; --card: #fff;
+      --navy: #0b1f3a; --blue: #2563eb; --blue-soft: #eef3ff;
+      --prom: #16a34a; --prom-soft: #e9f8ef; --neu: #f59e0b; --neu-soft: #fff6e0; --det: #e5484d; --det-soft: #fdeced;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
+    .num { font-variant-numeric: tabular-nums; }
+
+    header.top { background: linear-gradient(115deg, #0b1f3a 0%, #13325e 70%, #1e40af 130%); color: #fff; padding: 18px 28px 64px; }
+    .top-inner { max-width: 1360px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 700; color: #93b0e0; }
+    h1 { font-size: 24px; font-weight: 800; margin-top: 4px; letter-spacing: -.01em; }
+    .meta { color: #bcd0f0; font-size: 12.5px; margin-top: 6px; }
+    .top-actions { display: flex; gap: 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px; text-decoration: none;
+           border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; cursor: pointer; font-family: inherit; }
+    .btn:hover { background: rgba(255,255,255,.18); }
+
+    main { max-width: 1360px; margin: -46px auto 40px; padding: 0 28px; }
+
+    .filterbar { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+                 box-shadow: 0 6px 20px -12px rgba(15,23,42,.25); position: sticky; top: 8px; z-index: 5; }
+    .fld { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+    .fld label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; }
+    .fld select { font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 8px 30px 8px 10px; background: #f8fafc;
+                  appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+                  background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; }
+    .fld select:focus { outline: 2px solid var(--blue-soft); border-color: var(--blue); }
+    .reset { margin-left: auto; font-size: 13px; color: var(--blue); font-weight: 600; background: none; border: none; cursor: pointer; padding: 8px; font-family: inherit; }
+    .period-tag { font-size: 12px; color: var(--muted); padding: 8px 0; }
+
+    .grid { display: grid; gap: 14px; margin-top: 14px; }
+    .g-kpi { grid-template-columns: 1.35fr repeat(4, 1fr); }
+    .g-2 { grid-template-columns: 1fr 1fr; }
+    .g-32 { grid-template-columns: 1.5fr 1fr; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; min-width: 0; }
+    .card h3 { font-size: 14px; font-weight: 700; color: var(--ink); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .card h3 small { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .card .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .kpi label { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .kpi .v { font-size: 30px; font-weight: 800; margin-top: 6px; letter-spacing: -.02em; }
+    .kpi .s { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .kpi.nps { display: flex; gap: 14px; align-items: center; }
+    .kpi.nps .zone { display: inline-block; margin-top: 6px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+    .gauge { width: 150px; flex: none; }
+
+    .mix { margin-top: 14px; }
+    .mixbar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #eef1f6; }
+    .mixbar div { height: 100%; }
+    .mixleg { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 10px; gap: 8px; }
+    .mixleg div { font-size: 12px; color: var(--muted); }
+    .mixleg b { display: block; font-size: 18px; color: var(--ink); font-weight: 800; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+    .chart { position: relative; height: 290px; margin-top: 10px; }
+    .chart.sm { height: 240px; }
+
+    .findings { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .findings li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; line-height: 1.45; color: var(--ink2); }
+    .findings .ic { width: 26px; height: 26px; border-radius: 8px; flex: none; display: grid; place-items: center; font-size: 13px; }
+
+    .cloud { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: center; padding: 14px 4px; min-height: 220px; }
+    .cloud span { font-weight: 700; cursor: pointer; line-height: 1.1; transition: .15s; letter-spacing: -.01em; }
+    .cloud span:hover { opacity: .65; }
+    .legend-inline { display: flex; gap: 12px; font-size: 11.5px; color: var(--muted); margin-top: 4px; flex-wrap: wrap; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 9px 10px; background: #f6f8fc; border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+    td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink2); }
+    tr:hover td { background: #fafbfe; }
+    .tbl-wrap { max-height: 460px; overflow: auto; border-radius: 10px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .p-crit { background: var(--det-soft); color: #b42318; } .p-med { background: var(--neu-soft); color: #a15c07; } .p-low { background: var(--prom-soft); color: #067647; }
+    .p-blue { background: var(--blue-soft); color: #1e40af; }
+    .note { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; font-weight: 800; font-size: 13px; }
+    .n-d { background: var(--det-soft); color: #b42318; } .n-n { background: var(--neu-soft); color: #a15c07; } .n-p { background: var(--prom-soft); color: #067647; }
+    .comment { color: var(--ink); line-height: 1.45; }
+    .muted { color: var(--muted); font-size: 12px; }
+
+    .toolbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+    .search { flex: 1; min-width: 200px; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; font-family: inherit; font-size: 13px; background: #f8fafc; }
+    .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--ink2); cursor: pointer; font-family: inherit; }
+    .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+    .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 13px; }
+    .loading { position: fixed; inset: 0; background: rgba(243,245,250,.85); display: grid; place-items: center; z-index: 50; }
+    .loading .box { text-align: center; color: var(--ink2); font-weight: 600; }
+    .spin { width: 34px; height: 34px; border: 3px solid #dbe3f3; border-top-color: var(--blue); border-radius: 50%; animation: s .8s linear infinite; margin: 0 auto 12px; }
+    @keyframes s { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+
+    @media (max-width: 1100px) { .g-kpi { grid-template-columns: 1fr 1fr; } .g-kpi .kpi.nps { grid-column: span 2; } .g-32, .g-2 { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { main, header.top { padding-left: 14px; padding-right: 14px; } .g-kpi { grid-template-columns: 1fr; } .g-kpi .kpi.nps { grid-column: auto; } .fld { min-width: 46%; } }
+    @media print {
+      body { background: #fff; } header.top { padding-bottom: 18px; } main { margin-top: 0; }
+      .filterbar { position: static; box-shadow: none; } .top-actions, .reset, .toolbar { display: none; }
+      .tbl-wrap { max-height: none; overflow: visible; } .card { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="loading" id="loading"><div class="box"><div class="spin"></div>Carregando dados do NPS…</div></div>
+
+<header class="top">
+  <div class="top-inner">
+    <div>
+      <div class="eyebrow">NPS Produto · Protheus</div>
+      <h1 id="titulo">Dashboard Executivo NPS</h1>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="top-actions">
+      <a class="btn" id="btnImportar" target="_blank">↥ Importar relatório</a>
+      <button class="btn" onclick="window.print()">⎙ Exportar PDF</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="filterbar">
+    <div class="fld"><label>Módulo / Produto</label><select id="fMod"></select></div>
+    <div class="fld"><label>De</label><select id="fDe"></select></div>
+    <div class="fld"><label>Até</label><select id="fAte"></select></div>
+    <div class="fld"><label>Tipo do Cliente</label><select id="fTipo"></select></div>
+    <div class="fld"><label>País</label><select id="fPais"></select></div>
+    <button class="reset" id="btnReset">Restaurar padrão</button>
+  </div>
+
+  <section class="grid g-kpi">
+    <div class="card kpi nps">
+      <svg class="gauge" viewBox="0 0 200 120" id="gauge"></svg>
+      <div>
+        <label>NPS do período</label>
+        <div class="v num" id="kNps">–</div>
+        <span class="zone" id="kZona"></span>
+      </div>
+    </div>
+    <div class="card kpi"><label>Abordagens</label><div class="v num" id="kAbord">–</div><div class="s">pesquisas enviadas</div></div>
+    <div class="card kpi"><label>Respostas válidas</label><div class="v num" id="kResp">–</div><div class="s" id="kRespS"></div></div>
+    <div class="card kpi"><label>Taxa de aderência</label><div class="v num" id="kAder">–</div><div class="s">respostas ÷ abordagens</div></div>
+    <div class="card kpi"><label>Comentários</label><div class="v num" id="kCom">–</div><div class="s" id="kComS"></div></div>
+  </section>
+
+  <section class="grid g-32">
+    <div class="card">
+      <h3>Evolução do NPS por mês <small id="trend"></small></h3>
+      <div class="desc">Faixas: crítico &lt; 0 · razoável 0–49 · muito bom 50–74 · excelente ≥ 75</div>
+      <div class="chart"><canvas id="cNps"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Composição das respostas</h3>
+      <div class="mix">
+        <div class="mixbar" id="mixbar"></div>
+        <div class="mixleg">
+          <div><span class="dot" style="background:var(--prom)"></span>Promotores<b class="num" id="pP">–</b><span class="num" id="pPn"></span></div>
+          <div><span class="dot" style="background:var(--neu)"></span>Neutros<b class="num" id="pN">–</b><span class="num" id="pNn"></span></div>
+          <div><span class="dot" style="background:var(--det)"></span>Detratores<b class="num" id="pD">–</b><span class="num" id="pDn"></span></div>
+        </div>
+      </div>
+      <div class="chart sm"><canvas id="cNotas"></canvas></div>
+    </div>
+  </section>
+
+  <section class="grid g-2">
+    <div class="card">
+      <h3>Promotores, neutros e detratores por mês</h3>
+      <div class="chart"><canvas id="cPnd"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Causas raiz nos comentários</h3>
+      <div class="desc">Pilares de CX identificados por palavras-chave</div>
+      <div class="chart"><canvas id="cPilares"></canvas></div>
+    </div>
+  </section>
+
+  <section class="grid g-2">
+    <div class="card">
+      <h3>Principais achados</h3>
+      <ul class="findings" id="achados"></ul>
+    </div>
+    <div class="card">
+      <h3>Termos mais citados <small>clique para filtrar os comentários</small></h3>
+      <div class="legend-inline">
+        <span><span class="dot" style="background:var(--det)"></span>nota média ≤ 6</span>
+        <span><span class="dot" style="background:var(--neu)"></span>7–8</span>
+        <span><span class="dot" style="background:var(--prom)"></span>9–10</span>
+      </div>
+      <div class="cloud" id="cloud"></div>
+    </div>
+  </section>
+
+  <section class="grid" id="secModulos">
+    <div class="card">
+      <h3>NPS e comentários por módulo</h3>
+      <div class="chart sm"><canvas id="cMods"></canvas></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h3>Ranking de causas raiz</h3>
+      <div class="tbl-wrap"><table id="tRank"></table></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card" id="cardQuali">
+      <h3>Análise qualitativa dos comentários <small id="qualiCount"></small></h3>
+      <div class="toolbar">
+        <input class="search" id="qBusca" placeholder="Buscar por cliente, termo ou comentário…">
+        <button class="chip on" data-cl="">Todos</button>
+        <button class="chip" data-cl="Detrator">Detratores</button>
+        <button class="chip" data-cl="Neutro">Neutros</button>
+        <button class="chip" data-cl="Promotor">Promotores</button>
+      </div>
+      <div class="tbl-wrap"><table id="tQuali"></table></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h3>Plano de ação estruturado <small id="planoCount"></small></h3>
+      <div class="tbl-wrap"><table id="tPlano"></table></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const CTX = JSON.parse(<?= contexto ?>);
+  const $ = id => document.getElementById(id);
+  const COR = { prom: '#16a34a', neu: '#f59e0b', det: '#e5484d', blue: '#2563eb', grid: '#eef1f6', ink: '#334155', muted: '#64748b' };
+  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const URG = {
+    '1. Desempenho & Estabilidade': ['Crítico', 'p-crit', 'Task force de engenharia para otimização de queries, índices e banco de dados do {m}'],
+    '2. Suporte & Atendimento': ['Crítico', 'p-crit', 'Protocolo emergencial de atendimento (Red Flag) para chamados do {m}'],
+    '3. Regras de Negócio & Funcionalidades': ['Médio', 'p-med', 'Revisar rotinas e backlog de correções da equipe de produto do {m}'],
+    '4. Usabilidade & Capacitação': ['Baixo', 'p-low', 'Promover treinamentos, documentação no TDN e onboarding para usuários do {m}'],
+    '5. Outros / Não Classificados': ['Baixo', 'p-low', 'Acompanhamento de rotina de CS no {m}']
+  };
+  const STOP = new Set(('a o e é de da do das dos em no na nos nas um uma uns umas para pra por com sem que se ao aos à às mais muito muita muitos muitas mas ' +
+    'ou como quando onde porque pois isso isto esse essa este esta esses essas aquele aquela eles elas ele ela nós nos vocês você voce ser estar está esta são sao ' +
+    'tem têm ter foi era seu sua seus suas meu minha nosso nossa já ja não nao sim também tambem bem bom boa ótimo otimo até ate pelo pela pelos pelas ' +
+    'sobre entre todo toda todos todas cada qual quais ainda sempre nada tudo coisa coisas fazer faz feito pode podem precisa precisamos melhor melhorar ' +
+    'sistema totvs protheus empresa produto nota hoje então entao assim aqui lá la ter tenho temos tive vez vezes outro outra outros outras algum alguma alguns algumas ' +
+    'mesmo mesma desde após apos antes depois quanto quanta poderia deveria seria estão estao estamos estou fica ficar sendo sido dia dias').split(' '));
+
+  Chart.register(ChartDataLabels);
+  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = COR.muted;
+  Chart.defaults.plugins.datalabels.display = false;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.boxWidth = 8;
+
+  let DB = null, charts = {}, qualiFiltro = { cl: '', busca: '' };
+
+  // ---------- carga ----------
+  if (CTX.urlApp) $('btnImportar').href = CTX.urlApp + '?p=importar'; else $('btnImportar').classList.add('hidden');
+  google.script.run
+    .withSuccessHandler(json => { DB = preparar(JSON.parse(json)); iniciarFiltros(); render(); $('loading').classList.add('hidden'); })
+    .withFailureHandler(err => { $('loading').innerHTML = `<div class="box">Não foi possível carregar os dados.<br><span class="muted">${esc(err.message)}</span></div>`; })
+    .getDadosDashboard();
+
+  function preparar(raw) {
+    const linhas = raw.linhas.map(r => ({
+      dia: r[0], mes: r[0].slice(0, 7), resp: r[1] === 1, pais: r[2], mod: r[3], tipo: r[4],
+      nota: r[5], cl: r[6], razao: r[7], com: r[8], pil: r[9]
+    }));
+    const plano = raw.plano.map(p => ({ id: p[0], mes: p[1], mod: p[2], causa: p[3], area: p[4], acao: p[5], prazo: p[6], status: p[7] }));
+    return { linhas, plano, ultima: raw.ultimaImportacao };
+  }
+
+  // ---------- filtros ----------
+  function opts(sel, valores, todos) {
+    sel.innerHTML = (todos ? `<option value="">${todos}</option>` : '') + valores.map(v => { const [val, rot] = Array.isArray(v) ? v : [v, v]; return `<option value="${esc(val)}">${esc(rot)}</option>`; }).join('');
+  }
+  function contar(campo) {
+    const c = {}; DB.linhas.forEach(l => { if (l[campo]) c[l[campo]] = (c[l[campo]] || 0) + 1; });
+    return Object.keys(c).sort((a, b) => c[b] - c[a]);
+  }
+  function mesesEntre(a, b) {
+    const out = []; let [y, m] = a.split('-').map(Number); const [yb, mb] = b.split('-').map(Number);
+    while (y < yb || (y === yb && m <= mb)) { out.push(`${y}-${String(m).padStart(2, '0')}`); m++; if (m > 12) { m = 1; y++; } }
+    return out;
+  }
+  function iniciarFiltros() {
+    const mods = contar('mod'), tipos = contar('tipo'), paises = contar('pais');
+    opts($('fMod'), mods, mods.length > 1 ? 'Todos os módulos' : '');
+    opts($('fTipo'), tipos, 'Todos'); opts($('fPais'), paises, 'Todos');
+    const meses = [...new Set(DB.linhas.map(l => l.mes))].sort();
+    const todos = meses.length ? mesesEntre(meses[0], meses[meses.length - 1]) : [];
+    DB.meses = todos;
+    const rot = todos.map(m => [m, rotMes(m, true)]);
+    opts($('fDe'), rot); opts($('fAte'), rot);
+    padrao();
+    ['fMod', 'fDe', 'fAte', 'fTipo', 'fPais'].forEach(id => $(id).addEventListener('change', () => {
+      if ($('fDe').value > $('fAte').value) { if (id === 'fDe') $('fAte').value = $('fDe').value; else $('fDe').value = $('fAte').value; }
+      render();
+    }));
+    $('btnReset').addEventListener('click', () => { padrao(); render(); });
+  }
+  function padrao() {
+    const M = DB.meses; if (!M.length) return;
+    const ini = M.includes(CTX.periodo.mesInicio) ? CTX.periodo.mesInicio : M[0];
+    const fim = M.includes(CTX.periodo.mesFim) ? CTX.periodo.mesFim : M[M.length - 1];
+    $('fDe').value = ini <= fim ? ini : M[0];
+    $('fAte').value = ini <= fim ? fim : M[M.length - 1];
+    const mods = [...$('fMod').options].map(o => o.value);
+    $('fMod').value = mods.includes(CTX.filtros.produto) ? CTX.filtros.produto : mods[0];
+    $('fTipo').value = [...$('fTipo').options].some(o => o.value === CTX.filtros.tipoCliente) ? CTX.filtros.tipoCliente : '';
+    $('fPais').value = [...$('fPais').options].some(o => o.value === CTX.filtros.pais) ? CTX.filtros.pais : '';
+  }
+  function filtrados() {
+    const f = { mod: $('fMod').value, de: $('fDe').value, ate: $('fAte').value, tipo: $('fTipo').value, pais: $('fPais').value };
+    return {
+      f,
+      linhas: DB.linhas.filter(l => (!f.mod || l.mod === f.mod) && l.mes >= f.de && l.mes <= f.ate && (!f.tipo || l.tipo === f.tipo) && (!f.pais || l.pais === f.pais))
+    };
+  }
+
+  // ---------- cálculos ----------
+  function stats(ls) {
+    const s = { abord: ls.length, resp: 0, P: 0, N: 0, D: 0, com: 0, comD: 0 };
+    ls.forEach(l => {
+      if (l.resp) { s.resp++; if (l.cl === 'Promotor') s.P++; else if (l.cl === 'Neutro') s.N++; else if (l.cl === 'Detrator') s.D++; }
+      if (l.com) { s.com++; if (l.cl === 'Detrator') s.comD++; }
+    });
+    const base = s.P + s.N + s.D;
+    s.nps = base ? (s.P - s.D) / base * 100 : null;
+    s.pP = base ? s.P / base : 0; s.pN = base ? s.N / base : 0; s.pD = base ? s.D / base : 0;
+    s.ader = s.abord ? s.resp / s.abord : 0;
+    return s;
+  }
+  function porChave(ls, fn) { const g = {}; ls.forEach(l => { const k = fn(l); (g[k] = g[k] || []).push(l); }); return g; }
+  function zona(n) {
+    if (n == null) return ['Sem respostas', '#94a3b8', '#f1f5f9'];
+    if (n >= 75) return ['Excelente', '#067647', '#e3f7ea'];
+    if (n >= 50) return ['Muito bom', '#15803d', '#e9f8ef'];
+    if (n >= 0) return ['Razoável', '#a15c07', '#fff4dc'];
+    return ['Crítico', '#b42318', '#fdeced'];
+  }
+
+  // ---------- render ----------
+  function render() {
+    const { f, linhas } = filtrados();
+    const s = stats(linhas);
+    const modTxt = f.mod || 'Todos os módulos';
+    $('titulo').textContent = 'Dashboard Executivo NPS · ' + modTxt;
+    const ult = DB.ultima ? ` · última importação ${new Date(DB.ultima.quando).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` : '';
+    $('meta').textContent = `${rotMes(f.de, true)} a ${rotMes(f.ate, true)} · ${f.tipo || 'todos os tipos'} · ${f.pais || 'todos os países'}${ult}`;
+
+    // KPIs
+    const z = zona(s.nps);
+    $('kNps').textContent = s.nps == null ? '–' : fmt1(s.nps);
+    $('kNps').style.color = z[1];
+    $('kZona').textContent = z[0]; $('kZona').style.color = z[1]; $('kZona').style.background = z[2];
+    gauge(s.nps);
+    $('kAbord').textContent = int(s.abord);
+    $('kResp').textContent = int(s.resp);
+    $('kRespS').textContent = `${int(s.P + s.N + s.D)} com nota`;
+    $('kAder').textContent = pct(s.ader);
+    $('kCom').textContent = int(s.com);
+    $('kComS').textContent = `${int(s.comD)} de detratores`;
+
+    $('mixbar').innerHTML = `<div style="width:${s.pP * 100}%;background:${COR.prom}"></div><div style="width:${s.pN * 100}%;background:${COR.neu}"></div><div style="width:${s.pD * 100}%;background:${COR.det}"></div>`;
+    $('pP').textContent = pct(s.pP); $('pN').textContent = pct(s.pN); $('pD').textContent = pct(s.pD);
+    $('pPn').textContent = int(s.P) + ' resp.'; $('pNn').textContent = int(s.N) + ' resp.'; $('pDn').textContent = int(s.D) + ' resp.';
+
+    // séries mensais
+    const meses = mesesEntre(f.de, f.ate);
+    const g = porChave(linhas, l => l.mes);
+    const sm = meses.map(m => stats(g[m] || []));
+    const lab = meses.map(m => rotMes(m));
+
+    chartNps(lab, sm);
+    chartPnd(lab, sm);
+    chartNotas(linhas);
+    const pil = pilares(linhas, f.mod);
+    chartPilares(pil);
+    chartModulos(f);
+    achados(s, sm, meses, pil, linhas, modTxt);
+    nuvem(linhas);
+    tabelaRank(pil, f.mod);
+    tabelaQuali();
+    tabelaPlano(f);
+  }
+
+  function chartNps(lab, sm) {
+    const vals = sm.map(s => s.nps == null ? null : +s.nps.toFixed(1));
+    const validos = vals.filter(v => v != null);
+    if (validos.length >= 2) {
+      const ult = validos[validos.length - 1], ant = validos[validos.length - 2], d = ult - ant;
+      $('trend').innerHTML = `último mês ${fmt1(ult)} <span style="color:${d >= 0 ? COR.prom : COR.det};font-weight:700">${d >= 0 ? '▲' : '▼'} ${fmt1(Math.abs(d))}</span>`;
+    } else $('trend').textContent = '';
+    const bandas = {
+      id: 'bandas', beforeDraw(c) {
+        const { ctx, chartArea: a, scales: { y } } = c; if (!a) return;
+        [[-100, 0, 'rgba(229,72,77,.06)'], [0, 50, 'rgba(245,158,11,.06)'], [50, 75, 'rgba(22,163,74,.06)'], [75, 100, 'rgba(22,163,74,.11)']].forEach(([lo, hi, cor]) => {
+          const top = y.getPixelForValue(Math.min(hi, y.max)), bot = y.getPixelForValue(Math.max(lo, y.min));
+          if (bot > top) { ctx.fillStyle = cor; ctx.fillRect(a.left, top, a.right - a.left, bot - top); }
+        });
+      }
+    };
+    const min = Math.min(0, ...validos), max = Math.max(...validos, 50);
+    mk('cNps', {
+      type: 'line',
+      data: { labels: lab, datasets: [{
+        label: 'NPS', data: vals, borderColor: COR.blue, backgroundColor: COR.blue, borderWidth: 2.5, tension: .3, spanGaps: true,
+        pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#fff', pointBorderWidth: 2,
+        datalabels: { display: true, align: 'top', offset: 6, color: COR.ink, font: { weight: 700, size: 11.5 }, formatter: v => v == null ? '' : fmt1(v) }
+      }] },
+      options: base({ y: { min: Math.floor((min - 10) / 10) * 10, max: Math.min(100, Math.ceil((max + 10) / 10) * 10), grid: { color: COR.grid } } }, false),
+      plugins: [bandas]
+    });
+  }
+
+  function chartPnd(lab, sm) {
+    mk('cPnd', {
+      type: 'bar',
+      data: { labels: lab, datasets: [
+        { label: 'Promotores', data: sm.map(s => s.P), backgroundColor: COR.prom, borderRadius: 4, stack: 's' },
+        { label: 'Neutros', data: sm.map(s => s.N), backgroundColor: COR.neu, borderRadius: 4, stack: 's' },
+        { label: 'Detratores', data: sm.map(s => s.D), backgroundColor: COR.det, borderRadius: 4, stack: 's' }
+      ] },
+      options: Object.assign(base({ x: { stacked: true }, y: { stacked: true, grid: { color: COR.grid }, title: { display: true, text: 'Respostas' } } }, true), {
+        plugins: { legend: { position: 'top', align: 'end' }, tooltip: { mode: 'index', callbacks: { footer: it => { const s = sm[it[0].dataIndex]; return s.nps == null ? '' : 'NPS: ' + fmt1(s.nps); } } } }
+      })
+    });
+  }
+
+  function chartNotas(linhas) {
+    const c = Array(11).fill(0); let tot = 0;
+    linhas.forEach(l => { if (l.resp && l.nota != null && l.nota >= 0 && l.nota <= 10) { c[Math.round(l.nota)]++; tot++; } });
+    mk('cNotas', {
+      type: 'bar',
+      data: { labels: c.map((_, i) => i), datasets: [{ label: 'Respostas', data: c, borderRadius: 4,
+        backgroundColor: c.map((_, i) => i >= 9 ? COR.prom : i >= 7 ? COR.neu : COR.det),
+        datalabels: { display: ctx => tot && c[ctx.dataIndex] / tot >= .02, anchor: 'end', align: 'top', offset: 2, color: COR.ink, font: { size: 10.5, weight: 600 },
+          formatter: v => tot ? Math.round(v / tot * 100) + '%' : '' } }] },
+      options: Object.assign(base({ y: { display: false, grace: '15%' }, x: { title: { display: true, text: 'Nota' } } }, false), {
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: i => `${int(i.raw)} respostas (${tot ? pct(i.raw / tot) : '0%'})` } } }
+      })
+    });
+  }
+
+  function pilares(linhas, mod) {
+    const g = {};
+    linhas.filter(l => l.com).forEach(l => {
+      const p = l.pil || '5. Outros / Não Classificados';
+      g[p] = g[p] || { pilar: p, qtd: 0, soma: 0, n: 0, det: 0 };
+      g[p].qtd++; if (l.nota != null) { g[p].soma += l.nota; g[p].n++; } if (l.cl === 'Detrator') g[p].det++;
+    });
+    return Object.values(g).map(x => Object.assign(x, { media: x.n ? x.soma / x.n : null })).sort((a, b) => b.det - a.det || b.qtd - a.qtd);
+  }
+
+  function chartPilares(pil) {
+    const nome = p => p.replace(/^\d\.\s*/, '');
+    mk('cPilares', {
+      type: 'bar',
+      data: { labels: pil.map(p => nome(p.pilar)), datasets: [
+        { label: 'Detratores', data: pil.map(p => p.det), backgroundColor: COR.det, borderRadius: 4, stack: 's' },
+        { label: 'Neutros / promotores', data: pil.map(p => p.qtd - p.det), backgroundColor: '#c7d2fe', borderRadius: 4, stack: 's' }
+      ] },
+      options: Object.assign(base({ x: { stacked: true, grid: { color: COR.grid } }, y: { stacked: true, grid: { display: false } } }, true), {
+        indexAxis: 'y',
+        plugins: { legend: { position: 'top', align: 'end' }, tooltip: { mode: 'index', callbacks: { footer: it => { const p = pil[it[0].dataIndex]; return p.media == null ? '' : 'Nota média: ' + fmt1(p.media); } } } }
+      })
+    });
+  }
+
+  function chartModulos(f) {
+    const ls = DB.linhas.filter(l => l.mes >= f.de && l.mes <= f.ate && (!f.tipo || l.tipo === f.tipo) && (!f.pais || l.pais === f.pais));
+    const g = porChave(ls, l => l.mod), mods = Object.keys(g);
+    $('secModulos').classList.toggle('hidden', mods.length < 2);
+    if (mods.length < 2) return;
+    const st = mods.map(m => ({ m, s: stats(g[m]) })).sort((a, b) => b.s.resp - a.s.resp).slice(0, 15);
+    mk('cMods', {
+      type: 'bar',
+      data: { labels: st.map(x => x.m), datasets: [
+        { label: 'NPS', data: st.map(x => x.s.nps == null ? null : +x.s.nps.toFixed(1)), backgroundColor: COR.blue, borderRadius: 4, yAxisID: 'y',
+          datalabels: { display: true, anchor: 'end', align: 'top', color: COR.ink, font: { weight: 700, size: 11 }, formatter: v => v == null ? '' : fmt1(v) } },
+        { label: 'Comentários', data: st.map(x => x.s.com), backgroundColor: '#c7d2fe', borderRadius: 4, yAxisID: 'y2' }
+      ] },
+      options: base({ y: { grace: '12%', grid: { color: COR.grid }, title: { display: true, text: 'NPS' } }, y2: { position: 'right', grid: { display: false }, title: { display: true, text: 'Comentários' } } }, true)
+    });
+  }
+
+  function achados(s, sm, meses, pil, linhas, modTxt) {
+    const itens = [];
+    if (s.nps == null) { $('achados').innerHTML = '<li>Sem respostas no período selecionado.</li>'; return; }
+    const z = zona(s.nps);
+    itens.push(['📊', z[2], `NPS de <b>${fmt1(s.nps)}</b> em ${esc(modTxt)} (${z[0].toLowerCase()}): ${pct(s.pP)} promotores, ${pct(s.pN)} neutros e ${pct(s.pD)} detratores.`]);
+    itens.push(['📨', '#eef3ff', `<b>${int(s.resp)}</b> respostas de ${int(s.abord)} abordagens (aderência de ${pct(s.ader)}) e <b>${int(s.com)}</b> comentários qualificados.`]);
+    const val = sm.map((x, i) => ({ m: meses[i], nps: x.nps, n: x.P + x.N + x.D })).filter(x => x.nps != null && x.n >= 5);
+    if (val.length >= 2) {
+      const best = val.reduce((a, b) => b.nps > a.nps ? b : a), worst = val.reduce((a, b) => b.nps < a.nps ? b : a);
+      itens.push(['📈', '#e9f8ef', `Melhor mês: <b>${rotMes(best.m, true)}</b> (${fmt1(best.nps)}). Pior mês: <b>${rotMes(worst.m, true)}</b> (${fmt1(worst.nps)}).`]);
+      const ult = val[val.length - 1], ant = val.slice(0, -1), media = ant.reduce((a, b) => a + b.nps, 0) / ant.length, d = ult.nps - media;
+      itens.push([d >= 0 ? '⬆️' : '⬇️', d >= 0 ? '#e9f8ef' : '#fdeced', `${rotMes(ult.m, true)} fechou em <b>${fmt1(ult.nps)}</b>, ${fmt1(Math.abs(d))} pontos ${d >= 0 ? 'acima' : 'abaixo'} da média dos meses anteriores (${fmt1(media)}).`]);
+    }
+    const dores = pil.filter(p => p.det > 0).sort((a, b) => b.det - a.det).slice(0, 2);
+    if (dores.length) itens.push(['🎯', '#fff4dc', `Principais fatores de detração: ${dores.map(p => `<b>${esc(p.pilar.replace(/^\d\.\s*/, ''))}</b> (${p.det} detratores)`).join(' e ')}.`]);
+    if (s.comD) itens.push(['☎️', '#fdeced', `<b>${int(s.comD)}</b> detratores deixaram comentário — candidatos a contato de retorno (closed loop).`]);
+    const paises = {}; linhas.forEach(l => { if (l.resp && l.pais) paises[l.pais] = (paises[l.pais] || 0) + 1; });
+    const top = Object.keys(paises).sort((a, b) => paises[b] - paises[a])[0];
+    if (top && Object.keys(paises).length > 1) itens.push(['🌎', '#f1f5f9', `País com mais respostas: <b>${esc(top)}</b> (${pct(paises[top] / s.resp)}).`]);
+    $('achados').innerHTML = itens.map(([ic, bg, t]) => `<li><span class="ic" style="background:${bg}">${ic}</span><span>${t}</span></li>`).join('');
+  }
+
+  function nuvem(linhas) {
+    const freq = {};
+    linhas.filter(l => l.com).forEach(l => {
+      const termos = new Set(l.com.toLowerCase().normalize('NFC').match(/[a-zà-ú]{4,}/g) || []);
+      termos.forEach(t => { if (STOP.has(t)) return; const x = freq[t] = freq[t] || { n: 0, soma: 0, k: 0 }; x.n++; if (l.nota != null) { x.soma += l.nota; x.k++; } });
+    });
+    const top = Object.entries(freq).filter(([, v]) => v.n >= 2).sort((a, b) => b[1].n - a[1].n).slice(0, 40);
+    if (!top.length) { $('cloud').innerHTML = '<div class="empty">Poucos comentários para formar a nuvem de termos.</div>'; return; }
+    const max = top[0][1].n, min = top[top.length - 1][1].n;
+    const emb = top.map((t, i) => [t, i]).sort((a, b) => ((a[1] * 7919) % 41) - ((b[1] * 7919) % 41)).map(x => x[0]);
+    $('cloud').innerHTML = emb.map(([t, v]) => {
+      const media = v.k ? v.soma / v.k : 7, cor = media <= 6 ? COR.det : media < 9 ? '#d97706' : COR.prom;
+      const size = 13 + (max === min ? 10 : (v.n - min) / (max - min) * 24);
+      return `<span style="font-size:${size.toFixed(0)}px;color:${cor}" title="${v.n} comentários · nota média ${fmt1(media)}" data-t="${esc(t)}">${esc(t)}</span>`;
+    }).join('');
+    $('cloud').querySelectorAll('span[data-t]').forEach(el => el.addEventListener('click', () => {
+      $('qBusca').value = el.dataset.t; qualiFiltro.busca = el.dataset.t; tabelaQuali();
+      $('cardQuali').scrollIntoView({ behavior: 'smooth' });
+    }));
+  }
+
+  // Urgência = o maior entre a regra do pilar e a nota média dos comentários
+  function urgencia(p) {
+    const regra = URG[p.pilar] || URG['5. Outros / Não Classificados'];
+    const niveis = [['Baixo', 'p-low'], ['Médio', 'p-med'], ['Crítico', 'p-crit']];
+    const porRegra = niveis.findIndex(n => n[0] === regra[0]);
+    const porNota = p.media == null || p.det === 0 ? 0 : p.media < 5 ? 2 : p.media < 7 ? 1 : 0;
+    const n = niveis[Math.max(porRegra, porNota)];
+    return [n[0], n[1], regra[2]];
+  }
+
+  function tabelaRank(pil, mod) {
+    if (!pil.length) { $('tRank').innerHTML = '<tr><td class="empty">Sem comentários no período.</td></tr>'; return; }
+    const tot = pil.reduce((a, b) => a + b.qtd, 0);
+    $('tRank').innerHTML = `<thead><tr><th>#</th><th>Causa raiz (pilar CX)</th><th>Ocorrências</th><th>Detratores</th><th>Nota média</th><th>Urgência</th><th>Ação estratégica recomendada</th></tr></thead><tbody>` +
+      pil.map((p, i) => {
+        const u = urgencia(p);
+        return `<tr><td class="num"><b>${i + 1}</b></td><td><b>${esc(p.pilar.replace(/^\d\.\s*/, ''))}</b></td>
+          <td class="num">${p.qtd} <span class="muted">(${pct(p.qtd / tot)})</span></td><td class="num">${p.det}</td>
+          <td class="num">${p.media == null ? '–' : notaBadge(p.media, true)}</td>
+          <td><span class="pill ${u[1]}">● ${u[0]}</span></td><td>${esc(u[2].replace('{m}', mod || 'módulo'))}</td></tr>`;
+      }).join('') + '</tbody>';
+  }
+
+  document.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === ch));
+    qualiFiltro.cl = ch.dataset.cl; tabelaQuali();
+  }));
+  $('qBusca').addEventListener('input', e => { qualiFiltro.busca = e.target.value; tabelaQuali(); });
+
+  function tabelaQuali() {
+    if (!DB) return;
+    const { linhas } = filtrados();
+    const b = qualiFiltro.busca.trim().toLowerCase();
+    const rows = linhas.filter(l => l.com && (!qualiFiltro.cl || l.cl === qualiFiltro.cl) &&
+      (!b || l.com.toLowerCase().includes(b) || (l.razao || '').toLowerCase().includes(b)))
+      .sort((a, b) => b.dia.localeCompare(a.dia));
+    $('qualiCount').textContent = `${rows.length} comentário${rows.length === 1 ? '' : 's'}`;
+    if (!rows.length) { $('tQuali').innerHTML = '<tr><td class="empty">Nenhum comentário com esses filtros.</td></tr>'; return; }
+    $('tQuali').innerHTML = `<thead><tr><th>Data</th><th>Nota</th><th>Cliente</th><th>Comentário</th><th>Causa raiz</th></tr></thead><tbody>` +
+      rows.slice(0, 300).map(l => `<tr><td class="num" style="white-space:nowrap">${l.dia.split('-').reverse().join('/')}</td>
+        <td>${l.nota == null ? '–' : notaBadge(l.nota)}</td>
+        <td style="min-width:160px"><b>${esc(l.razao)}</b><div class="muted">${esc(l.mod)}</div></td>
+        <td class="comment">${realce(l.com, b)}</td>
+        <td><span class="pill p-blue">${esc((l.pil || '').replace(/^\d\.\s*/, ''))}</span></td></tr>`).join('') + '</tbody>' +
+      (rows.length > 300 ? `<tfoot><tr><td colspan="5" class="muted">Mostrando 300 de ${rows.length}. Use a busca para refinar.</td></tr></tfoot>` : '');
+  }
+
+  function tabelaPlano(f) {
+    const rows = DB.plano.filter(p => (!f.mod || p.mod === f.mod) && (!p.mes || (p.mes >= f.de && p.mes <= f.ate)));
+    $('planoCount').textContent = `${rows.length} ações`;
+    if (!rows.length) { $('tPlano').innerHTML = '<tr><td class="empty">Nenhuma ação no período.</td></tr>'; return; }
+    const st = s => /conclu/i.test(s) ? 'p-low' : /andamento/i.test(s) ? 'p-blue' : 'p-med';
+    $('tPlano').innerHTML = `<thead><tr><th>ID</th><th>Mês</th><th>Causa raiz / cliente</th><th>Responsável</th><th>Plano de ação (5W2H)</th><th>Prazo</th><th>Status</th></tr></thead><tbody>` +
+      rows.slice().reverse().map(p => `<tr><td class="num"><b>${esc(p.id)}</b></td><td style="white-space:nowrap">${p.mes ? rotMes(p.mes) : '–'}</td>
+        <td>${esc(p.causa)}</td><td>${esc(p.area)}</td><td>${esc(p.acao)}</td><td style="white-space:nowrap">${esc(p.prazo)}</td>
+        <td><span class="pill ${st(p.status)}">${esc(p.status)}</span></td></tr>`).join('') + '</tbody>';
+  }
+
+  // ---------- gauge ----------
+  function gauge(n) {
+    const cx = 100, cy = 100, r = 78, w = 16;
+    const ang = v => Math.PI * (1 - (v + 100) / 200);
+    const pt = (v, rr) => [cx + rr * Math.cos(ang(v)), cy - rr * Math.sin(ang(v))];
+    const arc = (a, b, cor) => { const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r); return `<path d="M${x1} ${y1} A${r} ${r} 0 0 1 ${x2} ${y2}" stroke="${cor}" stroke-width="${w}" fill="none"/>`; };
+    let svg = arc(-100, -1, '#f6c9cb') + arc(0, 49, '#fde7b0') + arc(50, 74, '#bfe8cd') + arc(75, 100, '#86d3a2');
+    if (n != null) {
+      const v = Math.max(-100, Math.min(100, n)); const [x, y] = pt(v, r - 22);
+      svg += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="6" fill="#0f172a"/>`;
+    }
+    svg += `<text x="22" y="116" font-size="10" fill="#94a3b8" text-anchor="middle">-100</text><text x="178" y="116" font-size="10" fill="#94a3b8" text-anchor="middle">100</text><text x="100" y="14" font-size="10" fill="#94a3b8" text-anchor="middle">0</text>`;
+    $('gauge').innerHTML = svg;
+  }
+
+  // ---------- helpers ----------
+  function mk(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($(id), cfg); }
+  function base(scales, legenda) {
+    return {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 8 } },
+      plugins: { legend: { display: legenda, position: 'top', align: 'end' } },
+      scales: Object.assign({ x: { grid: { display: false } } }, scales)
+    };
+  }
+  function notaBadge(n, dec) { const c = n >= 9 ? 'n-p' : n >= 7 ? 'n-n' : 'n-d'; return `<span class="note ${c}" ${dec ? 'style="width:auto;padding:0 8px"' : ''}>${dec ? fmt1(n) : n}</span>`; }
+  function rotMes(m, longo) { if (!m) return ''; const [y, mm] = m.split('-'); return `${MESES[+mm - 1]}/${longo ? y : y.slice(2)}`; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function realce(t, b) { const e = esc(t); if (!b) return e; const i = e.toLowerCase().indexOf(esc(b).toLowerCase()); return i < 0 ? e : e.slice(0, i) + '<mark>' + e.slice(i, i + esc(b).length) + '</mark>' + e.slice(i + esc(b).length); }
+  function int(n) { return Number(n || 0).toLocaleString('pt-BR'); }
+  function fmt1(n) { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  function pct(n) { return (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%'; }
+</script>
+</body>
+</html>

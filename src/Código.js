@@ -3,17 +3,112 @@
  * Com Padronização de Cabeçalhos (Módulo / Produto) em TODAS as abas para o Looker Studio
  */
 
+const URL_FLUIG = 'https://fluig.totvs.com/portal/p/10097/portal-de-insights-cx-v2';
+const URL_LOOKER = 'https://datastudio.google.com/s/o9eHWdrTIto';
+const URL_MANUAL = 'https://drive.google.com/file/d/1VD3aj2c-KN16bDuOecflMKa4YngtKRNM/view?usp=drive_link';
+
+// Filtros padrão aplicados no Portal de Insights CX (Fluig)
+const FILTROS_PADRAO = {
+  tipoCliente: 'Externo',
+  pais: 'BR',
+  pesquisa: 'NPS Produto Protheus',
+  produto: 'SIGAFIS',
+  linha: 'Protheus',
+  versao: 'Todos',
+  cliente: 'Todos'
+};
+
+const CABECALHOS_BASE = [
+  'Data da Resposta', 'Status', 'País', 'Linha de Produto', 'Módulo / Produto',
+  'Cliente', 'Email', 'Nota', 'CodT', 'Tipo do Cliente', 'Razão Social', 'Comentário',
+  'Data_Mes_Ano', 'Classificacao_NPS', 'Status_Aderencia'
+];
+
+// Colunas do arquivo exportado do Fluig → aceitas pelo nome (sem acento/maiúsculas)
+const MAPA_COLUNAS = {
+  data: ['data da resposta', 'data resposta', 'data'],
+  status: ['status'],
+  pais: ['pais'],
+  linha: ['linha de produto', 'linha'],
+  modulo: ['modulo / produto', 'modulo/produto', 'nome do produto', 'produto'],
+  cliente: ['cliente', 'codigo do cliente'],
+  email: ['email', 'e-mail'],
+  nota: ['nota'],
+  codt: ['codt', 'cod t', 'codigo t'],
+  tipo: ['tipo do cliente', 'tipo cliente'],
+  razao: ['razao social'],
+  comentario: ['comentario', 'comentarios']
+};
+
+const COLUNAS_OBRIGATORIAS = ['data', 'status', 'nota', 'razao', 'comentario'];
+
+const PILARES_CX = {
+  '1. Desempenho & Estabilidade': {
+    palavras: ['lento', 'lentidao', 'lentidão', 'travando', 'trava', 'duplica', 'horroroso', 'erros', 'lock', 'queda', 'timeout', 'demora', 'bug'],
+    acao: 'Task force de engenharia para otimização de queries, índices e performance'
+  },
+  '2. Suporte & Atendimento': {
+    palavras: ['suporte', 'atendimento', 'chamado', 'ticket', 'demora para responder', 'retorno', 'incompleto', 'csm', 'analista'],
+    acao: 'Protocolo emergencial de atendimento (Red Flag) e contato direto da gestão de CS'
+  },
+  '3. Regras de Negócio & Funcionalidades': {
+    palavras: ['rotina', 'calculo', 'cálculo', 'falha', 'divergencia', 'divergência', 'nao funciona', 'não funciona', 'campo', 'relatorio', 'relatório', 'tes', 'ibs', 'cbs', 'configurador'],
+    acao: 'Análise de backlog de produto e priorização de correção de rotina'
+  },
+  '4. Usabilidade & Capacitação': {
+    palavras: ['capacitacao', 'capacitação', 'treinamento', 'interface', 'layout', 'complexo', 'dificil', 'difícil', 'manual', 'tdn', 'nao sei usar', 'não sei usar', 'nao conheco', 'não conheço', 'chat bot', 'chatbot', 'intuitivo', 'intarativo', 'interativo'],
+    acao: 'Sessão de Onboarding/Treinamento e envio de documentação técnica do TDN'
+  }
+};
+const PILAR_OUTROS = '5. Outros / Não Classificados';
+const ACAO_OUTROS = 'Acompanhamento de rotina de Customer Success';
+
+const COMENTARIOS_VAZIOS = ['sem comentários', 'sem comentarios', 'sem comentário', 'sem comentario', 'nda', 'nada', 'n/a', 'na', '-', '--', '.'];
+
+// ============================================================
+// MENU, WEB APP E JANELAS
+// ============================================================
+
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('🚀 NPS Protheus Multi-Módulo')
-    .addItem('📊 Abrir Importador de NPS', 'mostrarInterfaceUpload')
+    .addItem('📥 Importar relatório do Fluig', 'mostrarInterfaceUpload')
+    .addItem('📊 Abrir Dashboard Executivo', 'abrirDashboard')
     .addSeparator()
     .addItem('🔄 Recalcular Dashboards e Gráficos', 'gerarAnaliseEGraficos')
-    .addItem('📸 Salvar Snapshot do NPS por Módulo', 'gravarSnapshotNPS') // <-- NOVO BOTÃO
+    .addItem('📸 Salvar Snapshot do NPS por Módulo', 'gravarSnapshotNPS')
     .addSeparator()
     .addItem('🌐 Abrir Portal de Insights CX (Fluig)', 'abrirFluig')
     .addItem('🔗 Abrir Dashboard no Looker Studio', 'abrirLinkLooker')
     .addToUi();
+}
+
+/** Web App: dashboard executivo (ou o importador com ?p=importar). */
+function doGet(e) {
+  const pagina = (e && e.parameter && e.parameter.p) === 'importar' ? 'Importador' : 'Dashboard';
+  const t = HtmlService.createTemplateFromFile(pagina);
+  t.contexto = contextoPaginas_();
+  return t.evaluate()
+    .setTitle(pagina === 'Importador' ? 'Importador NPS · Protheus' : 'Dashboard Executivo NPS · Protheus')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(nome) {
+  return HtmlService.createHtmlOutputFromFile(nome).getContent();
+}
+
+function contextoPaginas_() {
+  let urlApp = '';
+  try { urlApp = ScriptApp.getService().getUrl() || ''; } catch (e) { urlApp = ''; }
+  const periodo = periodoPadrao_(new Date());
+  return JSON.stringify({
+    urlApp: urlApp,
+    urlFluig: URL_FLUIG,
+    urlManual: URL_MANUAL,
+    filtros: FILTROS_PADRAO,
+    periodo: periodo
+  });
 }
 
 function abrirImportadorAutomatico() {
@@ -21,198 +116,309 @@ function abrirImportadorAutomatico() {
 }
 
 function mostrarInterfaceUpload() {
-  const html = HtmlService.createTemplateFromFile('Index')
-    .evaluate()
-    .setWidth(780)
-    .setHeight(680)
-    .setTitle('Central de Inteligência NPS Protheus');
+  const t = HtmlService.createTemplateFromFile('Importador');
+  t.contexto = contextoPaginas_();
+  const html = t.evaluate().setWidth(920).setHeight(720).setTitle('Importador NPS · Protheus');
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
 
-function processarUpload(fileData, fileName) {
+function abrirDashboard() {
+  let url = '';
+  try { url = ScriptApp.getService().getUrl(); } catch (e) { url = ''; }
+  if (!url) {
+    SpreadsheetApp.getUi().alert('O Web App ainda não está implantado. Publique pelo deploy automático do GitHub e tente de novo.');
+    return;
+  }
+  abrirUrl_(url, 'Abrindo o Dashboard Executivo...');
+}
+
+function abrirFluig() {
+  abrirUrl_(URL_FLUIG, 'Redirecionando para o Portal Fluig...');
+}
+
+function abrirLinkLooker() {
+  abrirUrl_(URL_LOOKER, 'Redirecionando para o Looker Studio...');
+}
+
+function abrirUrl_(url, titulo) {
+  const html = HtmlService.createHtmlOutput(
+    `<script>window.open(${JSON.stringify(url)}, "_blank");google.script.host.close();</script>`
+  ).setWidth(120).setHeight(50);
+  SpreadsheetApp.getUi().showModalDialog(html, titulo);
+}
+
+// ============================================================
+// UTILITÁRIOS (puros — cobertos por testes)
+// ============================================================
+
+/** Período padrão: 01/01 do ano até o último dia do mês anterior. Em janeiro, o ano anterior inteiro. */
+function periodoPadrao_(hoje) {
+  const fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0); // último dia do mês anterior
+  const inicio = new Date(fim.getFullYear(), 0, 1);
+  const f = d => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+  return { inicio: f(inicio), fim: f(fim), mesInicio: fmtMes_(inicio), mesFim: fmtMes_(fim) };
+}
+
+function fmtMes_(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function fmtDia_(d) {
+  return fmtMes_(d) + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function normalizarTexto_(s) {
+  return String(s == null ? '' : s)
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/** Aceita Date, serial do Excel, "dd/mm/aaaa [hh:mm[:ss]]" e ISO. Retorna Date ou null. */
+function parseData_(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  if (Object.prototype.toString.call(v) === '[object Date]') return isNaN(v.getTime()) ? null : v;
+  if (typeof v === 'number') {
+    const ms = Math.round((v - 25569) * 864e5);
+    const utc = new Date(ms);
+    return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate(), utc.getUTCHours(), utc.getUTCMinutes(), utc.getUTCSeconds());
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function parseNota_(v) {
+  if (v === '' || v === null || v === undefined) return '';
+  const n = Number(String(v).replace(',', '.').trim());
+  return isNaN(n) ? '' : n;
+}
+
+/** Encontra o índice de cada coluna conhecida a partir do cabeçalho do arquivo. */
+function mapearColunas_(header) {
+  const norm = header.map(normalizarTexto_);
+  const idx = {};
+  Object.keys(MAPA_COLUNAS).forEach(chave => {
+    idx[chave] = -1;
+    for (const nome of MAPA_COLUNAS[chave]) {
+      const i = norm.indexOf(nome);
+      if (i !== -1) { idx[chave] = i; break; }
+    }
+  });
+  return idx;
+}
+
+function comentarioValido_(c) {
+  const t = String(c == null ? '' : c).trim();
+  if (t.length <= 2 && !/^[a-zA-ZÀ-ú]{2}$/.test(t)) return false;
+  return COMENTARIOS_VAZIOS.indexOf(normalizarTexto_(t)) === -1;
+}
+
+function classificarComentario_(comentario) {
+  const comLower = String(comentario || '').toLowerCase();
+  for (const pilar in PILARES_CX) {
+    if (PILARES_CX[pilar].palavras.some(termo => contemTermo_(comLower, termo))) {
+      return { pilar: pilar, acao: PILARES_CX[pilar].acao };
+    }
+  }
+  return { pilar: PILAR_OUTROS, acao: ACAO_OUTROS };
+}
+
+/** Termos curtos (≤3 letras, ex.: "tes", "ibs") só contam como palavra inteira. */
+function contemTermo_(texto, termo) {
+  if (termo.length > 3) return texto.indexOf(termo) !== -1;
+  return new RegExp('(^|[^a-zà-ú])' + termo + '([^a-zà-ú]|$)').test(texto);
+}
+
+function classificarNota_(status, nota) {
+  if (status !== 'Respondido' || nota === '') return '';
+  if (nota >= 9) return 'Promotor';
+  if (nota >= 7) return 'Neutro';
+  return 'Detrator';
+}
+
+// ============================================================
+// IMPORTAÇÃO
+// ============================================================
+
+/**
+ * Recebe a planilha já lida no navegador (matriz com cabeçalho na 1ª linha,
+ * datas como "dd/mm/aaaa hh:mm:ss") e consolida na Base_Historica.
+ */
+function importarLinhas(matriz, nomeArquivo) {
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) {
+    return { success: false, message: 'Outra importação está em andamento. Tente de novo em alguns segundos.' };
+  }
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const bytes = Utilities.base64Decode(fileData.split(',')[1]);
-    const blob = Utilities.newBlob(bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', fileName);
-    
-    const tempFile = DriveApp.createFile(blob);
-    const tempSpreadsheet = SpreadsheetApp.open(tempFile);
-    const sourceSheet = tempSpreadsheet.getSheets()[0];
-    const sourceData = sourceSheet.getDataRange().getValues();
-    tempFile.setTrashed(true);
-
-    if (sourceData.length <= 1) {
-      return { success: false, message: 'O arquivo enviado não contém linhas de dados válidas.' };
+    if (!matriz || matriz.length <= 1) {
+      return { success: false, message: 'O arquivo não contém linhas de dados.' };
     }
-
-    const inseridos = consolidarBaseHistorica(sourceData);
+    const idx = mapearColunas_(matriz[0]);
+    const faltando = COLUNAS_OBRIGATORIAS.filter(c => idx[c] === -1);
+    if (faltando.length) {
+      return { success: false, message: 'Colunas obrigatórias ausentes: ' + faltando.map(c => MAPA_COLUNAS[c][0]).join(', ') };
+    }
+    const r = consolidarBaseHistorica(matriz);
     gerarAnaliseEGraficos();
-
-    if (inseridos === 0) {
-      return { 
-        success: true, 
-        message: 'Nenhum novo registro inserido. Todos os dados do arquivo já existem na Base Histórica!' 
-      };
-    }
-
-    return { 
-      success: true, 
-      message: `Sucesso! ${inseridos} novos registros consolidados.` 
+    PropertiesService.getDocumentProperties().setProperty('ULTIMA_IMPORTACAO', JSON.stringify({
+      quando: new Date().toISOString(), arquivo: nomeArquivo || '', inseridos: r.inseridos, duplicados: r.duplicados
+    }));
+    return {
+      success: true,
+      inseridos: r.inseridos,
+      duplicados: r.duplicados,
+      message: r.inseridos === 0
+        ? 'Nenhum registro novo — tudo já estava na Base Histórica.'
+        : `${r.inseridos} registros novos consolidados (${r.duplicados} já existiam).`
     };
-
   } catch (error) {
     return { success: false, message: 'Erro no processamento: ' + error.toString() };
+  } finally {
+    lock.releaseLock();
   }
+}
+
+// Mantido por compatibilidade com versões antigas da tela de upload.
+function processarUpload(fileData, fileName) {
+  return { success: false, message: 'Esta tela de upload foi substituída. Feche e abra de novo pelo menu "Importar relatório do Fluig".' };
 }
 
 // 1. CONSOLIDAÇÃO DA BASE HISTÓRICA (COM CABEÇALHO PADRONIZADO: "Módulo / Produto")
 function consolidarBaseHistorica(dados) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let baseSheet = ss.getSheetByName('Base_Historica');
-  
-  // Padronização: 'Módulo / Produto' na 5ª posição
-  const cabecalhosEsperados = [
-    'Data da Resposta', 'Status', 'País', 'Linha de Produto', 'Módulo / Produto', 
-    'Cliente', 'Email', 'Nota', 'CodT', 'Tipo do Cliente', 'Razão Social', 'Comentário',
-    'Data_Mes_Ano', 'Classificacao_NPS', 'Status_Aderencia'
-  ];
 
   if (!baseSheet) {
     baseSheet = ss.insertSheet('Base_Historica');
-    baseSheet.getRange(1, 1, 1, cabecalhosEsperados.length).setValues([cabecalhosEsperados]);
-    baseSheet.getRange(1, 1, 1, cabecalhosEsperados.length)
-      .setBackground('#102A43')
-      .setFontColor('#FFFFFF')
-      .setFontWeight('bold');
+    baseSheet.getRange(1, 1, 1, CABECALHOS_BASE.length).setValues([CABECALHOS_BASE])
+      .setBackground('#102A43').setFontColor('#FFFFFF').setFontWeight('bold');
     baseSheet.setFrozenRows(1);
   } else {
-    // Força a atualização do nome da coluna E para "Módulo / Produto" caso ainda esteja "Nome do Produto"
     baseSheet.getRange(1, 5).setValue('Módulo / Produto');
   }
 
   const dadosExistentes = baseSheet.getLastRow() > 1 ? baseSheet.getRange(2, 1, baseSheet.getLastRow() - 1, 11).getValues() : [];
   const chavesExistentes = new Set();
-  
   dadosExistentes.forEach(row => {
     const dt = row[0] ? new Date(row[0]).getTime() : '';
-    const cliente = String(row[10] || '').trim().toLowerCase();
-    if (dt || cliente) chavesExistentes.add(`${dt}_${cliente}`);
+    const razao = String(row[10] || '').trim().toLowerCase();
+    if (dt || razao) chavesExistentes.add(`${dt}_${razao}`);
   });
 
-  const header = dados[0];
-  const idxData = header.indexOf('Data da Resposta');
-  const idxStatus = header.indexOf('Status');
-  const idxNota = header.indexOf('Nota');
-  const idxComentario = header.indexOf('Comentário');
-  const idxRazao = header.indexOf('Razão Social');
-  const idxProduto = header.indexOf('Módulo / Produto') !== -1 ? header.indexOf('Módulo / Produto') : 
-                     (header.indexOf('Nome do Produto') !== -1 ? header.indexOf('Nome do Produto') : header.indexOf('Linha de Produto'));
+  const { linhas, duplicados } = montarLinhasBase_(dados, chavesExistentes);
 
-  const novasLinhas = [];
-
-  for (let i = 1; i < dados.length; i++) {
-    const row = dados[i];
-    if (!row[idxData] && !row[idxStatus]) continue;
-
-    const dataResp = new Date(row[idxData]);
-    const dataValida = !isNaN(dataResp.getTime());
-    const razaoSocial = String(row[idxRazao] || '').trim();
-    
-    const chaveUnica = `${dataValida ? dataResp.getTime() : ''}_${razaoSocial.toLowerCase()}`;
-    if (chavesExistentes.has(chaveUnica)) continue;
-    chavesExistentes.add(chaveUnica);
-
-    const dataPrimeiroDiaMes = dataValida ? new Date(dataResp.getFullYear(), dataResp.getMonth(), 1) : '';
-    const status = String(row[idxStatus] || '').trim();
-    const nota = (row[idxNota] !== "" && row[idxNota] !== null && !isNaN(row[idxNota])) ? Number(row[idxNota]) : "";
-    const modulo = (idxProduto !== -1 && row[idxProduto]) ? String(row[idxProduto]).trim() : 'SIGAFIS';
-    
-    let classificacao = "";
-    if (status === "Respondido" && nota !== "") {
-      if (nota >= 9) classificacao = "Promotor";
-      else if (nota >= 7) classificacao = "Neutro";
-      else classificacao = "Detrator";
-    }
-
-    const aderencia = (status === "Respondido") ? "Respondido" : "Cancelado";
-
-    novasLinhas.push([
-      dataValida ? dataResp : '', row[1] || '', row[2] || '', row[3] || '', modulo,
-      row[5] || '', row[6] || '', nota, row[8] || '', row[9] || '', row[10] || '', row[11] || '',
-      dataPrimeiroDiaMes, classificacao, aderencia
-    ]);
-  }
-
-  if (novasLinhas.length > 0) {
+  if (linhas.length > 0) {
     const lastRow = baseSheet.getLastRow();
-    baseSheet.getRange(lastRow + 1, 1, novasLinhas.length, novasLinhas[0].length).setValues(novasLinhas);
+    baseSheet.getRange(lastRow + 1, 1, linhas.length, linhas[0].length).setValues(linhas);
     baseSheet.getRange(2, 1, baseSheet.getLastRow() - 1, 1).setNumberFormat('dd/mm/yyyy hh:mm:ss');
     baseSheet.getRange(2, 13, baseSheet.getLastRow() - 1, 1).setNumberFormat('mmm/yyyy');
   }
 
-  return novasLinhas.length;
+  return { inseridos: linhas.length, duplicados: duplicados };
+}
+
+/** Converte a matriz do arquivo em linhas da Base_Historica, ignorando as já existentes. */
+function montarLinhasBase_(dados, chavesExistentes) {
+  const idx = mapearColunas_(dados[0]);
+  const v = (row, chave) => (idx[chave] !== -1 && row[idx[chave]] != null) ? row[idx[chave]] : '';
+  const linhas = [];
+  let duplicados = 0;
+
+  for (let i = 1; i < dados.length; i++) {
+    const row = dados[i];
+    if (!v(row, 'data') && !v(row, 'status')) continue;
+
+    const dataResp = parseData_(v(row, 'data'));
+    const razaoSocial = String(v(row, 'razao')).trim();
+    const chave = `${dataResp ? dataResp.getTime() : ''}_${razaoSocial.toLowerCase()}`;
+    if (chavesExistentes.has(chave)) { duplicados++; continue; }
+    chavesExistentes.add(chave);
+
+    const status = String(v(row, 'status')).trim();
+    const nota = parseNota_(v(row, 'nota'));
+    const modulo = String(v(row, 'modulo')).trim() || 'SIGAFIS';
+
+    linhas.push([
+      dataResp || '', status, v(row, 'pais'), v(row, 'linha'), modulo,
+      v(row, 'cliente'), v(row, 'email'), nota, v(row, 'codt'), v(row, 'tipo'), razaoSocial, v(row, 'comentario'),
+      dataResp ? new Date(dataResp.getFullYear(), dataResp.getMonth(), 1) : '',
+      classificarNota_(status, nota),
+      status === 'Respondido' ? 'Respondido' : 'Cancelado'
+    ]);
+  }
+  return { linhas: linhas, duplicados: duplicados };
+}
+
+// ============================================================
+// DADOS DO DASHBOARD
+// ============================================================
+
+function getDadosDashboard() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const base = ss.getSheetByName('Base_Historica');
+  const tz = Session.getScriptTimeZone();
+  const linhas = [];
+
+  if (base && base.getLastRow() > 1) {
+    const data = base.getRange(2, 1, base.getLastRow() - 1, CABECALHOS_BASE.length).getValues();
+    data.forEach(r => {
+      const d = r[0] instanceof Date ? r[0] : parseData_(r[0]);
+      if (!d) return;
+      const status = String(r[1] || '').trim();
+      const nota = r[7] === '' ? null : Number(r[7]);
+      const com = comentarioValido_(r[11]) ? String(r[11]).trim() : '';
+      const pil = com ? classificarComentario_(com).pilar : '';
+      linhas.push([
+        Utilities.formatDate(d, tz, 'yyyy-MM-dd'),
+        status === 'Respondido' ? 1 : 0,
+        String(r[2] || ''), String(r[4] || 'SIGAFIS'), String(r[9] || ''),
+        nota, String(r[13] || ''),
+        com ? String(r[10] || '') : '', com, pil
+      ]);
+    });
+  }
+
+  const plano = [];
+  const planoSheet = ss.getSheetByName('Plano_de_Acao');
+  if (planoSheet && planoSheet.getLastRow() > 1) {
+    planoSheet.getRange(2, 1, planoSheet.getLastRow() - 1, 9).getValues().forEach(r => {
+      const mes = r[1] instanceof Date ? Utilities.formatDate(r[1], tz, 'yyyy-MM') : '';
+      plano.push([String(r[0]), mes, String(r[2]), String(r[3]), String(r[4]), String(r[5]), String(r[6]), String(r[8])]);
+    });
+  }
+
+  const acoes = {};
+  Object.keys(PILARES_CX).forEach(p => acoes[p] = PILARES_CX[p].acao);
+  acoes[PILAR_OUTROS] = ACAO_OUTROS;
+
+  let ultima = null;
+  try { ultima = JSON.parse(PropertiesService.getDocumentProperties().getProperty('ULTIMA_IMPORTACAO') || 'null'); } catch (e) { ultima = null; }
+
+  return JSON.stringify({ linhas: linhas, plano: plano, acoes: acoes, ultimaImportacao: ultima, geradoEm: new Date().toISOString() });
 }
 
 // 2. RECONSTRÓI A ABA ANALISE_QUALI COM O MESMO NOME DE COLUNA ("Módulo / Produto")
 function reconstruirAnaliseQualitativa(dataBase) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName('Analise_Quali');
-  
-  if (!sheet) {
-    sheet = ss.insertSheet('Analise_Quali');
-  }
+  if (!sheet) sheet = ss.insertSheet('Analise_Quali');
   sheet.clear();
 
   const headers = [['Mês Ref.', 'Módulo / Produto', 'Cliente / Razão Social', 'Nota', 'Comentário Original', 'Pilar CX / Causa Raiz', 'Ação Sugerida', 'Status Acompanhamento']];
   sheet.getRange(1, 1, 1, headers[0].length).setValues(headers).setBackground('#2C5282').setFontColor('#FFFFFF').setFontWeight('bold');
   sheet.setFrozenRows(1);
 
-  const PILARES_CX = {
-    '1. Desempenho & Estabilidade': {
-      palavras: ['lento', 'lentidao', 'lentidão', 'travando', 'duplica', 'horroroso', 'erros', 'lock', 'queda', 'timeout', 'demora', 'bug'],
-      acao: 'Task force de engenharia para otimização de queries, índices e performance'
-    },
-    '2. Suporte & Atendimento': {
-      palavras: ['suporte', 'atendimento', 'chamado', 'ticket', 'demora para responder', 'retorno', 'incompleto', 'csm', 'analista'],
-      acao: 'Protocolo emergencial de atendimento (Red Flag) e contato direto da gestão de CS'
-    },
-    '3. Regras de Negócio & Funcionalidades': {
-      palavras: ['rotina', 'calculo', 'cálculo', 'falha', 'divergencia', 'divergência', 'nao funciona', 'não funciona', 'campo', 'relatorio', 'relatório', 'tes', 'ibs', 'cbs', 'configurador'],
-      acao: 'Análise de backlog de produto e priorização de correção de rotina'
-    },
-    '4. Usabilidade & Capacitação': {
-      palavras: ['capacitacao', 'capacitação', 'treinamento', 'interface', 'layout', 'complexo', 'dificil', 'difícil', 'manual', 'tdn', 'nao sei usar', 'não sei usar', 'nao conheco', 'não conheço'],
-      acao: 'Sessão de Onboarding/Treinamento e envio de documentação técnica do TDN'
-    }
-  };
-
   const linhasParaInserir = [];
-
   for (let i = 1; i < dataBase.length; i++) {
     const row = dataBase[i];
-    const mes = row[12]; // Data_Mes_Ano
-    const modulo = row[4] || 'SIGAFIS';
-    const cliente = row[10] || 'N/A';
-    const nota = row[7];
     const comentario = String(row[11] || '').trim();
-
-    if (!comentario || comentario.length <= 2 || comentario.toLowerCase() === 'sem comentários') continue;
-
-    const comLower = comentario.toLowerCase();
-    let pilarEncontrado = '5. Outros / Não Classificados';
-    let acaoSugerida = 'Acompanhamento de rotina de Customer Success';
-
-    for (let pilar in PILARES_CX) {
-      if (PILARES_CX[pilar].palavras.some(termo => comLower.includes(termo))) {
-        pilarEncontrado = pilar;
-        acaoSugerida = PILARES_CX[pilar].acao;
-        break;
-      }
-    }
-
-    linhasParaInserir.push([
-      mes, modulo, cliente, nota, comentario, pilarEncontrado, acaoSugerida, 'Pendente'
-    ]);
+    if (!comentarioValido_(comentario)) continue;
+    const c = classificarComentario_(comentario);
+    linhasParaInserir.push([row[12], row[4] || 'SIGAFIS', row[10] || 'N/A', row[7], comentario, c.pilar, c.acao, 'Pendente']);
   }
 
   if (linhasParaInserir.length > 0) {
@@ -227,7 +433,6 @@ function gerarAnaliseEGraficos() {
   const baseSheet = ss.getSheetByName('Base_Historica');
   if (!baseSheet) return;
 
-  // Garante que o cabeçalho da Base Histórica está como "Módulo / Produto"
   baseSheet.getRange(1, 5).setValue('Módulo / Produto');
 
   const data = baseSheet.getDataRange().getValues();
@@ -251,10 +456,10 @@ function gerarAnaliseEGraficos() {
     const chaveComposta = `${chaveMes}_${modulo}`;
 
     if (!estatisticas[chaveComposta]) {
-      estatisticas[chaveComposta] = { 
+      estatisticas[chaveComposta] = {
         dataInicioMes: new Date(dataObj.getFullYear(), dataObj.getMonth(), 1),
         modulo: modulo,
-        abordagens: 0, respostas: 0, promotores: 0, neutros: 0, detratores: 0 
+        abordagens: 0, respostas: 0, promotores: 0, neutros: 0, detratores: 0
       };
     }
 
@@ -310,7 +515,7 @@ function gerarAnaliseEGraficos() {
 function aplicarFormatacaoCondicional(sheet, maxRow) {
   sheet.clearConditionalFormatRules();
   const rangeNPS = sheet.getRange(2, 9, maxRow - 1, 1);
-  
+
   const ruleVerde = SpreadsheetApp.newConditionalFormatRule().whenNumberGreaterThanOrEqualTo(50).setBackground('#C6F6D5').setFontColor('#22543D').setRanges([rangeNPS]).build();
   const ruleAmarelo = SpreadsheetApp.newConditionalFormatRule().whenNumberBetween(0, 49.9).setBackground('#FEFCBF').setFontColor('#744210').setRanges([rangeNPS]).build();
   const ruleVermelho = SpreadsheetApp.newConditionalFormatRule().whenNumberLessThan(0).setBackground('#FED7D7').setFontColor('#742A2A').setRanges([rangeNPS]).build();
@@ -333,7 +538,7 @@ function gerarRankingEDecisao() {
     const row = dataQuali[i];
     const modulo = String(row[1] || 'SIGAFIS').trim();
     const nota = Number(row[3]);
-    const pilar = String(row[5] || '5. Outros / Não Classificados').trim();
+    const pilar = String(row[5] || PILAR_OUTROS).trim();
 
     const chaveComposta = `${modulo}_${pilar}`;
     if (!grupos[chaveComposta]) {
@@ -353,7 +558,7 @@ function gerarRankingEDecisao() {
   const linhasFinais = [];
   lista.forEach((item, index) => {
     const mediaNota = item.qtd > 0 ? (item.somaNota / item.qtd) : 0;
-    
+
     let urgencia = "🟢 Baixo";
     let acao = `Acompanhamento de rotina de CS no módulo ${item.modulo}`;
 
@@ -388,10 +593,10 @@ function gerarPlanoDeAcaoInteligente() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const qualiSheet = ss.getSheetByName('Analise_Quali');
   let planoSheet = ss.getSheetByName('Plano_de_Acao');
-  
+
   if (!qualiSheet) return;
   if (!planoSheet) planoSheet = ss.insertSheet('Plano_de_Acao');
-  
+
   const dataQuali = qualiSheet.getDataRange().getValues();
   if (dataQuali.length <= 1) return;
 
@@ -442,31 +647,32 @@ function gerarRelatorioConsolidado() {
   if (data.length <= 1) return;
 
   const consolPorModulo = {};
+  const paisesPorModulo = {};
 
   for (let i = 1; i < data.length; i++) {
     const status = data[i][1];
+    const pais = String(data[i][2] || '').trim();
     const modulo = data[i][4] || 'SIGAFIS';
     const comentario = data[i][11];
     const classif = data[i][13];
 
     if (!consolPorModulo[modulo]) {
       consolPorModulo[modulo] = { respostas: 0, comentarios: 0, promotores: 0, neutros: 0, detratores: 0 };
+      paisesPorModulo[modulo] = {};
     }
 
     if (status === 'Respondido') {
       consolPorModulo[modulo].respostas++;
+      if (pais) paisesPorModulo[modulo][pais] = (paisesPorModulo[modulo][pais] || 0) + 1;
 
       if (classif === 'Promotor') consolPorModulo[modulo].promotores++;
       else if (classif === 'Neutro') consolPorModulo[modulo].neutros++;
       else if (classif === 'Detrator') consolPorModulo[modulo].detratores++;
 
-      if (comentario && String(comentario).trim().length > 2 && String(comentario).trim().toLowerCase() !== 'sem comentários') {
-        consolPorModulo[modulo].comentarios++;
-      }
+      if (comentarioValido_(comentario)) consolPorModulo[modulo].comentarios++;
     }
   }
 
-  // 1. ABA RELATORIO_CONSOLIDADO
   let relSheet = ss.getSheetByName('Relatorio_Consolidado');
   if (!relSheet) relSheet = ss.insertSheet('Relatorio_Consolidado');
   relSheet.clear();
@@ -480,7 +686,6 @@ function gerarRelatorioConsolidado() {
     const pctNeu = st.respostas > 0 ? (st.neutros / st.respostas) : 0;
     const pctDet = st.respostas > 0 ? (st.detratores / st.respostas) : 0;
     const nps = (pctProm - pctDet) * 100;
-
     rowsLooker.push([mod, nps, pctProm, pctNeu, pctDet, st.respostas, st.comentarios]);
   }
 
@@ -492,21 +697,17 @@ function gerarRelatorioConsolidado() {
     relSheet.getRange(2, 6, rowsLooker.length, 2).setNumberFormat("#,##0");
   }
 
-  // 2. ABA PRINCIPAIS_ACHADOS COM COLUNA "Módulo / Produto" PARA FILTRAGEM
   let achadosSheet = ss.getSheetByName('Principais_Achados');
   if (!achadosSheet) achadosSheet = ss.insertSheet('Principais_Achados');
   achadosSheet.clear();
 
-  // Mapear principais dores do Ranking por módulo
   const doresPorModulo = {};
   if (rankSheet && rankSheet.getLastRow() > 1) {
     const rankData = rankSheet.getRange(2, 2, rankSheet.getLastRow() - 1, 4).getValues();
     rankData.forEach(r => {
       const mod = r[0];
-      const pilar = r[1];
-      const qtd = r[2];
       if (!doresPorModulo[mod]) doresPorModulo[mod] = [];
-      doresPorModulo[mod].push(`${pilar} (${qtd} ocorrências)`);
+      doresPorModulo[mod].push(`${r[1]} (${r[2]} ocorrências)`);
     });
   }
 
@@ -521,11 +722,13 @@ function gerarRelatorioConsolidado() {
     const nps = (pctProm - pctDet) * 100;
 
     const topDores = doresPorModulo[mod] ? doresPorModulo[mod].slice(0, 2).join(" e ") : "Sem dores críticas registradas";
+    const paises = paisesPorModulo[mod] || {};
+    const paisTop = Object.keys(paises).sort((a, b) => paises[b] - paises[a])[0] || 'N/D';
 
     linhasAchados.push([mod, 1, `• NPS do módulo ${mod}: ${nps.toFixed(1)} (Promotores: ${(pctProm*100).toFixed(1)}% | Neutros: ${(pctNeu*100).toFixed(1)}% | Detratores: ${(pctDet*100).toFixed(1)}%).`]);
     linhasAchados.push([mod, 2, `• Volume total: ${st.respostas} respostas consolidadas e ${st.comentarios} comentários qualificados.`]);
     linhasAchados.push([mod, 3, `• Principais fatores de atrito/detração em ${mod}: ${topDores}.`]);
-    linhasAchados.push([mod, 4, `• País com maior concentração de feedbacks: BR.`]);
+    linhasAchados.push([mod, 4, `• País com maior concentração de feedbacks: ${paisTop}.`]);
   }
 
   achadosSheet.getRange(1, 1, 1, headersAchados[0].length).setValues(headersAchados).setBackground('#1A365D').setFontColor('#FFFFFF').setFontWeight('bold');
@@ -534,25 +737,13 @@ function gerarRelatorioConsolidado() {
   }
 }
 
-function abrirFluig() {
-  const urlFluig = "https://fluig.totvs.com/portal/p/10097/portal-de-insights-cx-v2";
-  const html = HtmlService.createHtmlOutput(`<script>window.open("${urlFluig}", "_blank");google.script.host.close();</script>`).setWidth(100).setHeight(50);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Redirecionando para o Portal Fluig...');
-}
-
-function abrirLinkLooker() {
-  const urlLooker = "https://datastudio.google.com/s/o9eHWdrTIto";
-  const html = HtmlService.createHtmlOutput(`<script>window.open("${urlLooker}", "_blank");google.script.host.close();</script>`).setWidth(100).setHeight(50);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Redirecionando para o Looker Studio...');
-}
-
 /**
  * GRAVA O HISTÓRICO DE NPS LENDO DIRETAMENTE CADA MÊS/ANO DA ABA DASHBOARD_KPIS
  */
 function gravarSnapshotNPS() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashSheet = ss.getSheetByName('Dashboard_KPIs');
-  
+
   if (!dashSheet) {
     SpreadsheetApp.getUi().alert('Aba Dashboard_KPIs não encontrada. Execute "Recalcular Dashboards e Gráficos" primeiro!');
     return;
@@ -561,66 +752,36 @@ function gravarSnapshotNPS() {
   const dataDash = dashSheet.getDataRange().getValues();
   if (dataDash.length <= 1) return;
 
-  // 1. OBTER OU CRIAR A ABA Historico_NPS_Modulos
   let histSheet = ss.getSheetByName('Historico_NPS_Modulos');
   const headers = [['Data/Hora Registro', 'Mês/Ano Ref.', 'Módulo / Produto', 'NPS Score', '% Promotores', '% Neutros', '% Detratores', 'Total Respostas']];
-
-  if (!histSheet) {
-    histSheet = ss.insertSheet('Historico_NPS_Modulos');
-  }
+  if (!histSheet) histSheet = ss.insertSheet('Historico_NPS_Modulos');
 
   const dataAtual = new Date();
   const novasLinhas = [];
 
-  // 2. EXTRAIR O NPS DE CADA MÊS E MÓDULO DA ABA DASHBOARD_KPIS
   for (let i = 1; i < dataDash.length; i++) {
     const row = dataDash[i];
-    const rawMes = row[0];       // Coluna A: Mês/Ano
-    const modulo = row[1];       // Coluna B: Módulo / Produto
-    const respostas = row[3];    // Coluna D: Respostas
-    const pctProm = row[5];      // Coluna F: % Promotores
-    const pctNeu = row[6];       // Coluna G: % Neutros
-    const pctDet = row[7];       // Coluna H: % Detratores
-    const npsScore = row[8];     // Coluna I: NPS Score
-
+    const rawMes = row[0];
+    const modulo = row[1];
     if (!modulo || !rawMes) continue;
 
-    // Formatar Mês/Ano como texto (ex: "08/2026")
     let mesFmt = rawMes;
-    if (rawMes instanceof Date) {
-      mesFmt = Utilities.formatDate(rawMes, Session.getScriptTimeZone(), 'MM/yyyy');
-    }
+    if (rawMes instanceof Date) mesFmt = Utilities.formatDate(rawMes, Session.getScriptTimeZone(), 'MM/yyyy');
 
-    novasLinhas.push([
-      dataAtual,
-      mesFmt,
-      modulo,
-      npsScore,
-      pctProm,
-      pctNeu,
-      pctDet,
-      respostas
-    ]);
+    novasLinhas.push([dataAtual, mesFmt, modulo, row[8], row[5], row[6], row[7], row[3]]);
   }
 
-  // 3. ATUALIZAR A ABA HISTÓRICO SOBRESCREVENDO DE FORMA ORGANIZADA
   histSheet.clear();
-  histSheet.getRange(1, 1, 1, headers[0].length)
-    .setValues(headers)
-    .setBackground('#1A365D')
-    .setFontColor('#FFFFFF')
-    .setFontWeight('bold');
+  histSheet.getRange(1, 1, 1, headers[0].length).setValues(headers)
+    .setBackground('#1A365D').setFontColor('#FFFFFF').setFontWeight('bold');
   histSheet.setFrozenRows(1);
 
   if (novasLinhas.length > 0) {
     histSheet.getRange(2, 1, novasLinhas.length, novasLinhas[0].length).setValues(novasLinhas);
-    
-    // Formatação de Células
     histSheet.getRange(2, 1, novasLinhas.length, 1).setNumberFormat('dd/mm/yyyy hh:mm:ss');
     histSheet.getRange(2, 4, novasLinhas.length, 1).setNumberFormat('0.0');
     histSheet.getRange(2, 5, novasLinhas.length, 3).setNumberFormat('0.0%');
     histSheet.getRange(2, 8, novasLinhas.length, 1).setNumberFormat('#,##0');
-
     SpreadsheetApp.getUi().alert(`✅ Snapshot gravado com sucesso! ${novasLinhas.length} registros consolidados mês a mês.`);
   }
 }

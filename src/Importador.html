@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --bg: #f4f6fb; --card: #ffffff;
+      --navy: #0b1f3a; --blue: #2563eb; --blue-soft: #eff4ff;
+      --green: #16a34a; --green-soft: #ecfdf3; --amber: #b45309; --amber-soft: #fff7e6; --red: #dc2626; --red-soft: #fef2f2;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 18px; }
+
+    .hero {
+      background: linear-gradient(120deg, #0b1f3a 0%, #13325e 60%, #1d4ed8 140%);
+      color: #fff; border-radius: 16px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    .hero small { text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: #9fb6dc; font-weight: 600; }
+    .hero h1 { font-size: 21px; font-weight: 800; margin-top: 4px; }
+    .hero p { color: #c6d4ee; font-size: 13px; margin-top: 4px; }
+    .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px;
+           text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: .15s; white-space: nowrap; font-family: inherit; }
+    .btn-ghost { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.25); }
+    .btn-ghost:hover { background: rgba(255,255,255,.2); }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-light { background: #fff; color: var(--ink); border-color: var(--line); }
+    .btn-light:hover { border-color: #cbd5e1; }
+
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+    .step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
+    .step .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 12px; background: #e2e8f0; color: var(--muted); flex: none; }
+    .step b { display: block; font-size: 13px; }
+    .step span { font-size: 12px; color: var(--muted); }
+    .step.active { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+    .step.active .n { background: var(--blue); color: #fff; }
+    .step.done .n { background: var(--green); color: #fff; }
+
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+    .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
+    .card-head h2 { font-size: 15px; font-weight: 700; }
+    .card-head a { color: var(--blue); font-weight: 600; font-size: 13px; text-decoration: none; }
+
+    .filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .filter { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+    .filter label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+    .filter div { font-weight: 600; font-size: 13px; margin-top: 2px; }
+    .filter.wide { background: var(--blue-soft); border-color: #c7d7fe; }
+
+    .drop { border: 2px dashed #cbd5e1; border-radius: 14px; padding: 30px 16px; text-align: center; cursor: pointer; transition: .15s; background: #fbfcfe; }
+    .drop:hover, .drop.over { border-color: var(--blue); background: var(--blue-soft); }
+    .drop .ico { width: 48px; height: 48px; border-radius: 12px; background: var(--blue-soft); color: var(--blue); display: grid; place-items: center; margin: 0 auto 10px; }
+    .drop h3 { font-size: 15px; }
+    .drop p { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+
+    .summary { display: none; }
+    .file-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; }
+    .file-row .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    .stat label { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .stat div { font-size: 20px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .stat .sub { font-size: 11.5px; font-weight: 500; color: var(--muted); }
+
+    .alert { border-radius: 10px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 8px; display: flex; gap: 8px; align-items: flex-start; }
+    .alert.warn { background: var(--amber-soft); color: var(--amber); }
+    .alert.err { background: var(--red-soft); color: var(--red); }
+    .alert.ok { background: var(--green-soft); color: var(--green); }
+    .alert.info { background: var(--blue-soft); color: #1e40af; }
+
+    .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+
+    @media (max-width: 720px) {
+      .hero { flex-direction: column; align-items: flex-start; }
+      .steps, .stats { grid-template-columns: 1fr 1fr; }
+      .filters { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div>
+      <small>NPS Produto · Protheus</small>
+      <h1>Importador do Relatório Fluig</h1>
+      <p>Extraia do Portal de Insights CX, solte o arquivo aqui e o dashboard é atualizado.</p>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-ghost" id="lnkFluig" target="_blank">Portal Fluig ↗</a>
+      <a class="btn btn-ghost" id="lnkDash" target="_blank">Dashboard ↗</a>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step active" id="st1"><div class="n">1</div><div><b>Extrair no Fluig</b><span>com os filtros abaixo</span></div></div>
+    <div class="step" id="st2"><div class="n">2</div><div><b>Conferir arquivo</b><span>prévia antes de gravar</span></div></div>
+    <div class="step" id="st3"><div class="n">3</div><div><b>Importar</b><span>sem duplicar registros</span></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Filtros para aplicar no Portal de Insights CX</h2>
+      <a id="lnkManual" target="_blank">Manual de extração (PDF) ↗</a>
+    </div>
+    <div class="filters" id="filters"></div>
+  </div>
+
+  <div class="card">
+    <div id="dropArea">
+      <div class="drop" id="drop">
+        <div class="ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <h3>Arraste a planilha exportada do Fluig</h3>
+        <p>ou clique para escolher · .xlsx, .xls ou .csv</p>
+        <input type="file" id="file" accept=".xlsx,.xls,.csv" class="hidden">
+      </div>
+    </div>
+
+    <div class="summary" id="summary">
+      <div class="file-row">
+        <div class="name" id="fileName"></div>
+        <button class="btn btn-light" id="btnTrocar">Trocar arquivo</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><label>Linhas</label><div id="sLinhas">–</div></div>
+        <div class="stat"><label>Respondidas</label><div id="sResp">–</div></div>
+        <div class="stat"><label>NPS do arquivo</label><div id="sNps">–</div></div>
+        <div class="stat"><label>Período</label><div class="sub" id="sPeriodo" style="font-size:13px;font-weight:700;color:var(--ink);margin-top:6px">–</div></div>
+      </div>
+      <div id="alerts"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btnImportar">Importar para a Base Histórica</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const CTX = JSON.parse(<?= contexto ?>);
+  const $ = id => document.getElementById(id);
+  let matriz = null, nomeArquivo = '';
+
+  $('lnkFluig').href = CTX.urlFluig;
+  $('lnkManual').href = CTX.urlManual;
+  if (CTX.urlApp) $('lnkDash').href = CTX.urlApp; else $('lnkDash').classList.add('hidden');
+
+  const F = CTX.filtros;
+  $('filters').innerHTML = [
+    ['Período', `${CTX.periodo.inicio} a ${CTX.periodo.fim}`, true],
+    ['Tipo do Cliente', F.tipoCliente], ['País', F.pais],
+    ['Pesquisa', F.pesquisa], ['Produto', F.produto], ['Linha de Produto', F.linha],
+    ['Versão', F.versao], ['Cliente', F.cliente]
+  ].map(([l, v, w]) => `<div class="filter${w ? ' wide' : ''}"><label>${l}</label><div>${v}</div></div>`).join('');
+
+  // ---------- leitura do arquivo ----------
+  const drop = $('drop');
+  drop.addEventListener('click', () => $('file').click());
+  $('file').addEventListener('change', e => ler(e.target.files[0]));
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => ler(e.dataTransfer.files[0]));
+  $('btnTrocar').addEventListener('click', () => { reset(); $('file').click(); });
+  $('btnImportar').addEventListener('click', importar);
+
+  const norm = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const pad = n => String(n).padStart(2, '0');
+  const fmtData = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const COLS = {
+    data: ['data da resposta', 'data resposta', 'data'], status: ['status'], pais: ['pais'],
+    modulo: ['modulo / produto', 'modulo/produto', 'nome do produto', 'produto'], tipo: ['tipo do cliente', 'tipo cliente'],
+    nota: ['nota'], razao: ['razao social'], comentario: ['comentario', 'comentarios']
+  };
+  const OBRIG = { data: 'Data da Resposta', status: 'Status', nota: 'Nota', razao: 'Razão Social', comentario: 'Comentário' };
+
+  function ler(file) {
+    if (!file) return;
+    nomeArquivo = file.name;
+    const csv = /\.csv$/i.test(file.name);
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = csv
+          ? XLSX.read(e.target.result, { type: 'string', raw: true })
+          : XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        let rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+        // o cabeçalho pode não estar na 1ª linha (títulos do Power BI)
+        const hi = rows.slice(0, 15).findIndex(r => r.some(c => norm(c) === 'data da resposta' || norm(c) === 'razao social'));
+        if (hi > 0) rows = rows.slice(hi);
+        rows = rows.filter((r, i) => i === 0 || r.some(c => String(c).trim() !== ''));
+        matriz = rows.map((r, i) => i === 0 ? r.map(c => String(c).trim()) : r.map(c => c instanceof Date ? fmtData(c) : c));
+        resumo();
+      } catch (err) {
+        mostrarErro('Não consegui ler o arquivo: ' + err.message);
+      }
+    };
+    csv ? reader.readAsText(file, 'utf-8') : reader.readAsArrayBuffer(file);
+  }
+
+  function idx(header) {
+    const h = header.map(norm), o = {};
+    for (const k in COLS) o[k] = COLS[k].map(n => h.indexOf(n)).find(i => i !== -1) ?? -1;
+    return o;
+  }
+
+  function parseData(v) {
+    const m = String(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+    if (typeof v === 'number') return new Date(Math.round((v - 25569) * 864e5));
+    const d = new Date(v); return isNaN(d) ? null : d;
+  }
+
+  function resumo() {
+    $('dropArea').classList.add('hidden');
+    $('summary').style.display = 'block';
+    $('fileName').textContent = '📄 ' + nomeArquivo;
+    setStep(2);
+    const alerts = [];
+    const I = idx(matriz[0]);
+    const faltam = Object.keys(OBRIG).filter(k => I[k] === -1).map(k => OBRIG[k]);
+    const dados = matriz.slice(1);
+
+    if (faltam.length) {
+      alerts.push(['err', `Colunas obrigatórias não encontradas: <b>${faltam.join(', ')}</b>. Confira se exportou a aba <b>Relatório</b> do portal.`]);
+      $('btnImportar').disabled = true;
+    } else {
+      $('btnImportar').disabled = false;
+    }
+
+    let resp = 0, prom = 0, det = 0, min = null, max = null;
+    const paisOut = new Set(), tipoOut = new Set(), mods = {};
+    dados.forEach(r => {
+      const st = String(r[I.status] || '').trim();
+      const nota = Number(String(r[I.nota]).replace(',', '.'));
+      if (st === 'Respondido' && String(r[I.nota]).trim() !== '' && !isNaN(nota)) {
+        resp++; if (nota >= 9) prom++; else if (nota <= 6) det++;
+      }
+      const d = I.data !== -1 ? parseData(r[I.data]) : null;
+      if (d) { if (!min || d < min) min = d; if (!max || d > max) max = d; }
+      if (I.pais !== -1 && r[I.pais] && String(r[I.pais]).trim() !== CTX.filtros.pais) paisOut.add(String(r[I.pais]).trim());
+      if (I.tipo !== -1 && r[I.tipo] && norm(r[I.tipo]) !== norm(CTX.filtros.tipoCliente)) tipoOut.add(String(r[I.tipo]).trim());
+      const m = I.modulo !== -1 ? String(r[I.modulo] || '').trim() : '';
+      if (m) mods[m] = (mods[m] || 0) + 1;
+    });
+
+    $('sLinhas').textContent = dados.length.toLocaleString('pt-BR');
+    $('sResp').innerHTML = resp.toLocaleString('pt-BR') + (dados.length ? ` <span class="sub">${(resp / dados.length * 100).toFixed(1)}%</span>` : '');
+    $('sNps').textContent = resp ? ((prom - det) / resp * 100).toFixed(1).replace('.', ',') : '–';
+    const f = d => d ? d.toLocaleDateString('pt-BR') : '?';
+    $('sPeriodo').textContent = min ? `${f(min)} → ${f(max)}` : '–';
+
+    if (paisOut.size) alerts.push(['warn', `Há linhas de outro país (${[...paisOut].slice(0, 4).join(', ')}). O filtro padrão é <b>${CTX.filtros.pais}</b>.`]);
+    if (tipoOut.size) alerts.push(['warn', `Há linhas com tipo de cliente ${[...tipoOut].slice(0, 3).join(', ')}. O filtro padrão é <b>${CTX.filtros.tipoCliente}</b>.`]);
+    const outrosMods = Object.keys(mods).filter(m => m !== CTX.filtros.produto);
+    if (outrosMods.length) alerts.push(['info', `Módulos no arquivo: ${Object.keys(mods).map(m => `<b>${m}</b> (${mods[m]})`).join(', ')}. Todos serão importados e podem ser filtrados no dashboard.`]);
+    if (!faltam.length && !paisOut.size && !tipoOut.size) alerts.push(['ok', 'Arquivo no formato esperado. Registros já existentes na base serão ignorados automaticamente.']);
+    $('alerts').innerHTML = alerts.map(([t, m]) => `<div class="alert ${t}">${m}</div>`).join('');
+  }
+
+  function importar() {
+    if (!matriz) return;
+    const btn = $('btnImportar');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Importando e recalculando…';
+    setStep(3);
+    google.script.run
+      .withSuccessHandler(res => {
+        btn.innerHTML = 'Importar para a Base Histórica';
+        if (res.success) {
+          setStep(4);
+          $('alerts').innerHTML = `<div class="alert ok">✅ ${res.message}</div>` +
+            (CTX.urlApp ? `<div class="actions"><a class="btn btn-primary" href="${CTX.urlApp}" target="_blank">Abrir Dashboard ↗</a></div>` : '');
+          btn.classList.add('hidden');
+        } else {
+          mostrarErro(res.message); btn.disabled = false;
+        }
+      })
+      .withFailureHandler(err => { btn.innerHTML = 'Importar para a Base Histórica'; mostrarErro(err.message); btn.disabled = false; })
+      .importarLinhas(matriz, nomeArquivo);
+  }
+
+  function mostrarErro(msg) {
+    $('summary').style.display = 'block';
+    $('alerts').innerHTML = `<div class="alert err">❌ ${msg}</div>`;
+  }
+
+  function reset() {
+    matriz = null; $('file').value = '';
+    $('dropArea').classList.remove('hidden'); $('summary').style.display = 'none';
+    $('btnImportar').classList.remove('hidden'); setStep(1);
+  }
+
+  function setStep(n) {
+    [1, 2, 3].forEach(i => {
+      const el = $('st' + i);
+      el.classList.toggle('active', i === n);
+      el.classList.toggle('done', i < n);
+    });
+  }
+</script>
+</body>
+</html>
