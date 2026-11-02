@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+    body { background-color: #F7FAFC; color: #2D3748; padding: 20px; }
+    
+    .card {
+      background: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      padding: 24px;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #EDF2F7;
+      padding-bottom: 14px;
+    }
+    
+    .badge {
+      background: #EBF8FF;
+      color: #2B6CB0;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 11px;
+      text-transform: uppercase;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+    
+    h2 { font-size: 18px; color: #1A202C; font-weight: 700; }
+    p.subtitle { font-size: 12px; color: #718096; margin-top: 2px; }
+
+    .btn-looker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #4285F4 0%, #1A73E8 100%);
+      color: #FFFFFF !important;
+      text-decoration: none;
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 4px 6px -1px rgba(66, 133, 244, 0.3);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .btn-looker:hover {
+      background: linear-gradient(135deg, #1A73E8 0%, #1557B0 100%);
+      transform: translateY(-1px);
+    }
+
+    .instructions-box {
+      background: #F7FAFC;
+      border: 1px solid #E2E8F0;
+      border-left: 4px solid #3182CE;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .instructions-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #2B6CB0;
+      margin-bottom: 8px;
+    }
+    .link-fluig {
+      color: #3182CE;
+      font-weight: 600;
+      text-decoration: underline;
+    }
+    .link-fluig:hover { color: #2B6CB0; }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+      background: #FFFFFF;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #EDF2F7;
+    }
+    .filter-item { font-size: 11px; color: #4A5568; }
+    .filter-item b {
+      color: #1A202C;
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #718096;
+    }
+    
+    .drop-zone {
+      border: 2px dashed #CBD5E0;
+      border-radius: 10px;
+      padding: 24px 16px;
+      text-align: center;
+      background: #FAF5FF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: #805AD5;
+      background: #F3E8FF;
+    }
+    
+    .icon { font-size: 32px; color: #805AD5; margin-bottom: 4px; }
+    
+    .btn-submit {
+      display: inline-block;
+      background: #3182CE;
+      color: #FFFFFF;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 14px;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn-submit:hover { background: #2B6CB0; }
+    .btn-submit:disabled { background: #A0AEC0; cursor: not-allowed; }
+    
+    #file-info { margin-top: 8px; font-size: 12px; color: #2D3748; font-weight: 600; }
+    
+    .status-msg {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      display: none;
+    }
+    .status-success { background: #C6F6D5; color: #22543D; }
+    .status-error { background: #FED7D7; color: #742A2A; }
+    .status-loading { background: #EBF8FF; color: #2C5282; }
+
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3182CE;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div>
+        <span class="badge">Multi-Módulo • Protheus</span>
+        <h2>Central de Inteligência NPS</h2>
+        <p class="subtitle">Consolidação e Classificação por Pilares Universais de CX</p>
+      </div>
+
+      <a href="https://datastudio.google.com/s/o9eHWdrTIto" target="_blank" class="btn-looker">
+        📊 Dashboard Looker ↗
+      </a>
+    </div>
+
+    <div class="instructions-box">
+      <div class="instructions-header">
+        <span>📌 Guia do TL: Extração do Relatório</span>
+        <a href="https://fluig.totvs.com/portal/p/10097/portal-de-insights-cx-v2" target="_blank" class="link-fluig">
+          Acessar Portal Fluig ↗
+        </a>
+      </div>
+      <p style="font-size:11px; color:#4A5568;">Aplique os filtros padrão no Fluig (Suporta qualquer módulo do Protheus):</p>
+      
+      <div class="filter-grid">
+        <div class="filter-item"><b>Período</b> Início do ano até mês atual</div>
+        <div class="filter-item"><b>Pesquisa</b> NPS Produto Protheus</div>
+        <div class="filter-item"><b>Tipo Cliente</b> Externo</div>
+        <div class="filter-item"><b>Linha Produto</b> Protheus</div>
+        <div class="filter-item"><b>País</b> BR</div>
+        <div class="filter-item"><b>Produto / Cliente</b> Qualquer Módulo / Todos</div>
+      </div>
+    </div>
+
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="icon">📁</div>
+      <p style="font-weight:600; font-size:13px; color:#4A5568;">Arraste a planilha exportada do Fluig aqui</p>
+      <p style="font-size:11px; color:#A0AEC0; margin-top:2px;">Suporta relatórios brutos de qualquer módulo (.xlsx ou .csv)</p>
+      <input type="file" id="file-input" accept=".xlsx, .csv" style="display:none" onchange="handleFileSelect(this.files)">
+    </div>
+
+    <div id="file-info"></div>
+
+    <button id="btn-submit" class="btn-submit" onclick="uploadFile()" disabled>Processar Relatório & Gerar Análises</button>
+
+    <div id="status" class="status-msg"></div>
+  </div>
+
+  <script>
+    let selectedFile = null;
+    const dropZone = document.getElementById('drop-zone');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => dropZone.classList.add('dragover'));
+    ['dragleave', 'drop'].forEach(eventName => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', (e) => { handleFileSelect(e.dataTransfer.files); });
+
+    function handleFileSelect(files) {
+      if (files.length > 0) {
+        selectedFile = files[0];
+        document.getElementById('file-info').innerText = '📄 Arquivo selecionado: ' + selectedFile.name;
+        document.getElementById('btn-submit').disabled = false;
+      }
+    }
+
+    function uploadFile() {
+      if (!selectedFile) return;
+
+      const statusDiv = document.getElementById('status');
+      const btn = document.getElementById('btn-submit');
+      
+      btn.disabled = true;
+      statusDiv.className = 'status-msg status-loading';
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = '<span class="loader"></span> Validando filtros, consolidando histórico e atualizando análises...';
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onError)
+          .processarUpload(e.target.result, selectedFile.name);
+      };
+
+      reader.readAsDataURL(selectedFile);
+    }
+
+    function onSuccess(res) {
+      const statusDiv = document.getElementById('status');
+      if (res.success) {
+        statusDiv.className = 'status-msg status-success';
+        statusDiv.innerHTML = '✅ ' + res.message;
+        document.getElementById('file-info').innerText = '';
+        selectedFile = null;
+      } else {
+        statusDiv.className = 'status-msg status-error';
+        statusDiv.innerHTML = '❌ ' + res.message;
+        document.getElementById('btn-submit').disabled = false;
+      }
+    }
+
+    function onError(err) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.className = 'status-msg status-error';
+      statusDiv.innerHTML = '❌ Erro no servidor: ' + err.message;
+      document.getElementById('btn-submit').disabled = false;
+    }
+  </script>
+</body>
+</html>

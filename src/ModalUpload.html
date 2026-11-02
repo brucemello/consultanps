@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: #f8fafc; color: #1e293b; height: 500px; overflow: hidden; padding: 16px; }
+    
+    /* Navegação por Abas */
+    .nav-tabs { display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 16px; }
+    .tab-btn { background: none; border: none; padding: 8px 16px; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+
+    .tab-content { display: none; height: 420px; }
+    .tab-content.active { display: block; }
+
+    /* Área de Drag & Drop */
+    .dropzone {
+      border: 2px dashed #94a3b8;
+      border-radius: 12px;
+      background: #ffffff;
+      height: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 20px;
+    }
+    .dropzone.dragover { border-color: #2563eb; background: #eff6ff; }
+    .dropzone h3 { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 6px; }
+    .dropzone p { font-size: 13px; color: #64748b; }
+    .btn-select { margin-top: 14px; background: #2563eb; color: white; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; }
+
+    /* Guia e Link do Manual PDF */
+    .guide-box { 
+      background: #ffffff; 
+      border: 1px solid #e2e8f0; 
+      border-radius: 12px; 
+      padding: 24px; 
+      height: 380px; 
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .pdf-icon { font-size: 48px; margin-bottom: 12px; }
+    .guide-title { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .guide-desc { font-size: 13px; color: #64748b; max-width: 440px; margin-bottom: 20px; line-height: 1.5; }
+    
+    .btn-pdf {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #dc2626;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);
+      transition: all 0.2s ease;
+    }
+    .btn-pdf:hover { background: #b91c1c; transform: translateY(-1px); }
+
+    /* Status e Loading */
+    #status-area { margin-top: 14px; text-align: center; font-size: 13px; font-weight: 600; }
+    .success { color: #16a34a; }
+    .error { color: #dc2626; }
+    .loading { color: #2563eb; }
+  </style>
+</head>
+<body>
+
+  <!-- Abas -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('upload')">📁 Importar NPS</button>
+    <button class="tab-btn" onclick="switchTab('guia')">📖 Manual de Extração (PDF)</button>
+  </div>
+
+  <!-- Aba 1: Upload Drag & Drop -->
+  <div id="tab-upload" class="tab-content active">
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:36px;">📥</div>
+      <h3>Arraste e solte a planilha da exportação do Fluig</h3>
+      <p>Suporta arquivos nos formatos <strong>.xlsx</strong> ou <strong>.xls</strong></p>
+      <button class="btn-select">Selecionar Arquivo</button>
+      <input type="file" id="fileInput" accept=".xlsx, .xls" style="display:none" onchange="handleFiles(this.files)">
+    </div>
+    <div id="status-area"></div>
+  </div>
+
+  <!-- Aba 2: Link do Manual PDF -->
+  <div id="tab-guia" class="tab-content">
+    <div class="guide-box">
+      <div class="pdf-icon">📄</div>
+      <div class="guide-title">Manual de Extração de Dados do Fluig</div>
+      <p class="guide-desc">
+        Acesse o manual em PDF completo com o passo a passo sobre como filtrar os períodos, colunas obrigatórias e exportar os arquivos corretamente no Fluig.
+      </p>
+      <a href="https://drive.google.com/file/d/1VD3aj2c-KN16bDuOecflMKa4YngtKRNM/view?usp=drive_link" target="_blank" class="btn-pdf">
+        <span>👁️ Visualizar Manual no Google Drive</span>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      if(tabName === 'upload') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-upload').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-guia').classList.add('active');
+      }
+    }
+
+    const dropzone = document.getElementById('dropzone');
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => { e.preventDefault(); dropzone.classList.add('dragover'); }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      handleFiles(dt.files);
+    });
+
+    function handleFiles(files) {
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      const statusArea = document.getElementById('status-area');
+      
+      statusArea.className = 'loading';
+      statusArea.innerHTML = '⏳ Lendo e processando arquivo do Fluig...';
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Converte para matriz JS
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd hh:mm:ss' });
+
+        // Envia os dados para o Apps Script
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res.sucesso) {
+              statusArea.className = 'success';
+              statusArea.innerHTML = `✅ Concluído! <strong>${res.inseridos}</strong> novos registros salvos. (${res.duplicados} duplicados ignorados)`;
+            } else {
+              statusArea.className = 'error';
+              statusArea.innerHTML = `❌ Erro: ${res.mensagem}`;
+            }
+          })
+          .withFailureHandler(err => {
+            statusArea.className = 'error';
+            statusArea.innerHTML = `❌ Erro ao processar: ${err.message}`;
+          })
+          .processarDadosUpload(jsonData);
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+  </script>
+</body>
+</html>
