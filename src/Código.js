@@ -80,6 +80,11 @@ function onOpen() {
     .addSeparator()
     .addItem('🌐 Abrir Portal de Insights CX (Fluig)', 'abrirFluig')
     .addItem('🔗 Abrir Dashboard no Looker Studio', 'abrirLinkLooker')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('⏰ Lembrete mensal de importação')
+      .addItem('Ativar lembrete (1º dia útil)', 'instalarLembreteMensal')
+      .addItem('Enviar lembrete de teste agora', 'enviarLembreteTeste')
+      .addItem('Desativar lembrete', 'removerLembreteMensal'))
     .addToUi();
 }
 
@@ -784,4 +789,129 @@ function gravarSnapshotNPS() {
     histSheet.getRange(2, 8, novasLinhas.length, 1).setNumberFormat('#,##0');
     SpreadsheetApp.getUi().alert(`✅ Snapshot gravado com sucesso! ${novasLinhas.length} registros consolidados mês a mês.`);
   }
+}
+
+// ============================================================
+// LEMBRETE MENSAL (1º DIA ÚTIL)
+// ============================================================
+
+const HANDLER_LEMBRETE = 'lembreteImportacaoMensal';
+
+/** Domingo de Páscoa (algoritmo de Meeus/Jones/Butcher). */
+function pascoa_(ano) {
+  const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(ano, mes - 1, dia);
+}
+
+/** Feriados nacionais (e pontos facultativos usuais) no formato yyyy-MM-dd. */
+function feriadosNacionais_(ano) {
+  const fixos = ['01-01', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '11-20', '12-25'].map(md => `${ano}-${md}`);
+  const p = pascoa_(ano);
+  const rel = dias => fmtDia_(new Date(p.getFullYear(), p.getMonth(), p.getDate() + dias));
+  return new Set(fixos.concat([rel(-48), rel(-47), rel(-2), rel(60)])); // carnaval (seg/ter), sexta santa, Corpus Christi
+}
+
+function ehDiaUtil_(d) {
+  const dow = d.getDay();
+  return dow !== 0 && dow !== 6 && !feriadosNacionais_(d.getFullYear()).has(fmtDia_(d));
+}
+
+function primeiroDiaUtil_(ano, mes) {
+  const d = new Date(ano, mes, 1);
+  while (!ehDiaUtil_(d)) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+/** Disparado todo dia pelo gatilho; só envia no 1º dia útil do mês. */
+function lembreteImportacaoMensal() {
+  const hoje = new Date();
+  const pdu = primeiroDiaUtil_(hoje.getFullYear(), hoje.getMonth());
+  if (fmtDia_(hoje) !== fmtDia_(pdu)) return;
+  enviarLembrete_(false);
+}
+
+function enviarLembreteTeste() {
+  const para = enviarLembrete_(true);
+  SpreadsheetApp.getUi().alert(`📧 Lembrete de teste enviado para ${para}.`);
+}
+
+function enviarLembrete_(teste) {
+  const para = Session.getEffectiveUser().getEmail();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const periodo = periodoPadrao_(new Date());
+  const tz = Session.getScriptTimeZone();
+
+  // Último mês já presente na base
+  let ultimoMes = '';
+  const base = ss.getSheetByName('Base_Historica');
+  if (base && base.getLastRow() > 1) {
+    const datas = base.getRange(2, 1, base.getLastRow() - 1, 1).getValues().map(r => r[0]).filter(d => d instanceof Date);
+    if (datas.length) ultimoMes = fmtMes_(new Date(Math.max.apply(null, datas)));
+  }
+  const pendente = !ultimoMes || ultimoMes < periodo.mesFim;
+  const nomeMes = m => { const [y, mm] = m.split('-'); return ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+mm - 1] + '/' + y; };
+
+  let urlApp = '';
+  try { urlApp = ScriptApp.getService().getUrl() || ''; } catch (e) { urlApp = ''; }
+  const linkImportar = urlApp ? urlApp + '?p=importar' : ss.getUrl();
+  const F = FILTROS_PADRAO;
+  const linha = (k, v) => `<tr><td style="padding:6px 12px;color:#64748b;font-size:13px">${k}</td><td style="padding:6px 12px;font-weight:600;font-size:13px">${v}</td></tr>`;
+  const botao = (url, txt, cor) => `<a href="${url}" style="display:inline-block;background:${cor};color:#fff;text-decoration:none;font-weight:600;padding:10px 16px;border-radius:8px;margin-right:8px;font-size:14px">${txt}</a>`;
+
+  const html = `
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;color:#0f172a">
+    <div style="background:#0b1f3a;color:#fff;padding:18px 20px;border-radius:12px 12px 0 0">
+      <div style="font-size:11px;letter-spacing:2px;color:#93b0e0;font-weight:700">NPS PRODUTO · PROTHEUS</div>
+      <div style="font-size:19px;font-weight:700;margin-top:4px">Hora de importar o NPS de ${nomeMes(periodo.mesFim)}</div>
+    </div>
+    <div style="border:1px solid #e2e8f0;border-top:0;padding:18px 20px;border-radius:0 0 12px 12px">
+      <p style="font-size:14px;margin:0 0 12px">${pendente
+        ? `A base está atualizada até <b>${ultimoMes ? nomeMes(ultimoMes) : '—'}</b>. Extraia o relatório no Fluig com os filtros abaixo e importe o arquivo.`
+        : `A base já tem dados até <b>${nomeMes(ultimoMes)}</b>. Se quiser, reimporte o período completo para pegar respostas atrasadas — duplicados são ignorados.`}</p>
+      <table style="border-collapse:collapse;background:#f8fafc;border-radius:8px;width:100%;margin-bottom:16px">
+        ${linha('Período', `${periodo.inicio} a ${periodo.fim}`)}
+        ${linha('Tipo do Cliente', F.tipoCliente)}${linha('País', F.pais)}${linha('Pesquisa', F.pesquisa)}
+        ${linha('Produto', F.produto)}${linha('Linha de Produto', F.linha)}${linha('Versão', F.versao)}${linha('Cliente', F.cliente)}
+      </table>
+      ${botao(URL_FLUIG, '1. Abrir o Fluig', '#13325e')}${botao(linkImportar, '2. Importar arquivo', '#2563eb')}
+      ${urlApp ? `<p style="font-size:13px;margin:16px 0 0"><a href="${urlApp}" style="color:#2563eb">Abrir o Dashboard Executivo</a></p>` : ''}
+    </div>
+  </div>`;
+
+  MailApp.sendEmail({
+    to: para,
+    subject: `${teste ? '[TESTE] ' : ''}NPS Protheus · importar relatório de ${nomeMes(periodo.mesFim)}`,
+    htmlBody: html
+  });
+  return para;
+}
+
+function instalarLembreteMensal() {
+  removerGatilhos_();
+  ScriptApp.newTrigger(HANDLER_LEMBRETE).timeBased().everyDays(1).atHour(7).inTimezone(Session.getScriptTimeZone()).create();
+  const prox = proximoLembrete_();
+  SpreadsheetApp.getUi().alert(`✅ Lembrete ativado. Você receberá um e-mail às 7h do 1º dia útil de cada mês.\nPróximo: ${prox}.`);
+}
+
+function removerLembreteMensal() {
+  const n = removerGatilhos_();
+  SpreadsheetApp.getUi().alert(n ? '🔕 Lembrete desativado.' : 'Não havia lembrete ativo.');
+}
+
+function removerGatilhos_() {
+  let n = 0;
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === HANDLER_LEMBRETE) { ScriptApp.deleteTrigger(t); n++; }
+  });
+  return n;
+}
+
+function proximoLembrete_() {
+  const hoje = new Date();
+  let d = primeiroDiaUtil_(hoje.getFullYear(), hoje.getMonth());
+  if (fmtDia_(d) < fmtDia_(hoje) || (fmtDia_(d) === fmtDia_(hoje) && hoje.getHours() >= 7)) d = primeiroDiaUtil_(hoje.getFullYear(), hoje.getMonth() + 1);
+  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
 }

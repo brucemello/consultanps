@@ -80,4 +80,15 @@ t('comentários vazios ou genéricos são ignorados', () => {
   assert.strictEqual(run('comentarioValido_("Top demais")'), true);
 });
 
+
+t('1º dia útil pula fim de semana e feriados nacionais', () => {
+  const f = s => run(`fmtDia_(primeiroDiaUtil_(${s}))`);
+  assert.strictEqual(f('2026, 10'), '2026-11-03'); // 01/11 domingo, 02/11 Finados
+  assert.strictEqual(f('2027, 0'), '2027-01-04');  // 01/01 feriado, 02-03 fim de semana
+  assert.strictEqual(f('2026, 4'), '2026-05-04');  // 01/05 feriado (sexta)
+  assert.strictEqual(f('2026, 11'), '2026-12-01');
+  assert.strictEqual(run('fmtDia_(pascoa_(2026))'), '2026-04-05');
+  assert.strictEqual(run('feriadosNacionais_(2026).has("2026-02-17")'), true); // carnaval
+});
+
 console.log(`nps.test.js: ${ok} testes ok`);
