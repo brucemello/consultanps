@@ -20,20 +20,7 @@ const MESES_CURTOS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
 // TELAS
 // ============================================================
 
-function mostrarCadastro() {
-  const t = HtmlService.createTemplateFromFile('Cadastro');
-  t.contexto = contextoPaginas_('dialog');
-  SpreadsheetApp.getUi().showModalDialog(t.evaluate().setWidth(1040).setHeight(720), ' ');
-}
-
-/** periodoJson (opcional): {"mesInicio":"2026-07","mesFim":"2026-10"} — vem do filtro do dashboard. */
-function mostrarEnvioResumo(periodoJson) {
-  const t = HtmlService.createTemplateFromFile('EnvioResumo');
-  const ctx = JSON.parse(contextoPaginas_('dialog'));
-  ctx.periodoEscolhido = periodoJson ? periodoDeMeses_(JSON.parse(periodoJson)) : null;
-  t.contexto = JSON.stringify(ctx);
-  SpreadsheetApp.getUi().showModalDialog(t.evaluate().setWidth(1100).setHeight(760), ' ');
-}
+// As telas ficam no Painel (Painel.html + módulos Painel*.html); ver abrirPainel() em Código.js.
 
 // ============================================================
 // CADASTRO
@@ -620,4 +607,43 @@ function statusAutomacoes() {
   const ult = PropertiesService.getDocumentProperties().getProperty('ENVIO_AUTO_MES');
   if (ult) linhas.push(`Último envio automático: resumo de ${nomeMes_(ult)}.`);
   SpreadsheetApp.getUi().alert('⏰ Automações do NPS', linhas.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+// ============================================================
+// API DA ABA AUTOMAÇÕES (Painel)
+// ============================================================
+
+function getStatusAutomacoes() {
+  const c = lerCadastro_();
+  const p = prepararEnvios_();
+  const tz = Session.getScriptTimeZone();
+  const ult = PropertiesService.getDocumentProperties().getProperty('ENVIO_AUTO_MES');
+  const log = [];
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABA_LOG_ENVIOS);
+  if (sh && sh.getLastRow() > 1) {
+    const n = Math.min(30, sh.getLastRow() - 1);
+    sh.getRange(sh.getLastRow() - n + 1, 1, n, CAB_LOG.length).getValues().reverse().forEach(r => log.push({
+      quando: r[0] instanceof Date ? Utilities.formatDate(r[0], tz, 'dd/MM/yyyy HH:mm') : String(r[0]),
+      tipo: String(r[1]), nome: String(r[2]), email: String(r[3]), periodo: String(r[4]),
+      nps: r[5] === '' ? '—' : String(r[5]).replace('.', ','), modo: String(r[7] || '')
+    }));
+  }
+  return JSON.stringify({
+    lembrete: { ativo: gatilhoAtivo_(HANDLER_LEMBRETE), proximo: proximoLembrete_() },
+    envio: { ativo: gatilhoAtivo_(HANDLER_ENVIO_AUTO), proximo: fmtDataBR_(proximoEnvioAuto_()) },
+    destinatarios: { tls: c.times.filter(t => t.ativo).length, gestores: c.gestores.filter(g => g.ativo).length },
+    temMesFim: p.temMesFim, mesFimNome: nomeMes_(p.periodo.mesFim),
+    ultimoAuto: ult ? nomeMes_(ult) : '', log: log
+  });
+}
+
+function alternarAutomacao(qual, ligar) {
+  if (qual === 'lembrete') { if (ligar) instalarLembreteMensal(true); else removerGatilhos_(HANDLER_LEMBRETE); }
+  else if (qual === 'envio') { if (ligar) instalarEnvioAutomatico(true); else removerGatilhos_(HANDLER_ENVIO_AUTO); }
+  else throw new Error('Automação desconhecida: ' + qual);
+  return getStatusAutomacoes();
+}
+
+function enviarLembreteTestePainel() {
+  return enviarLembrete_(true);
 }

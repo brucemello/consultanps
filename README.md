@@ -13,15 +13,19 @@ Código do Google Apps Script com deploy automático via GitHub Actions.
 
 > Evite editar direto no editor do Apps Script: o próximo deploy sobrescreve. Se editar, rode **Importar do Apps Script** antes.
 
-## Telas
+## Central NPS (uma tela, com abas)
 
-| Tela | Onde abrir | O que faz |
+Abra pelo menu **🚀 NPS Protheus → 🧭 Abrir Central NPS** (ou pela URL do Web App, com `?tab=dash|imp|env|cad|auto`).
+
+| Aba | Arquivo | O que faz |
 |---|---|---|
-| **Importador** (`src/Importador.html`) | Menu da planilha → *Importar relatório do Fluig*, ou URL do Web App com `?p=importar` | Mostra os filtros do Fluig, lê o .xlsx/.csv no navegador, exibe prévia (linhas, período, NPS, alertas) e grava na `Base_Historica` sem duplicar |
-| **Dashboard Executivo** (`src/Dashboard.html`) | Menu → *Abrir Dashboard Executivo* (abre em tela grande dentro da planilha), ou URL do Web App | KPIs, NPS por mês, P/N/D, distribuição de notas, causas raiz, achados, termos mais citados, comentários e plano de ação, com filtros de módulo, período, tipo e país |
+| 📊 **Dashboard** | `src/PainelDashboard.html` | KPIs, NPS por mês, P/N/D, notas, causas raiz, achados, termos, comentários e plano de ação, com filtros. "Enviar resumo" leva o período do filtro |
+| 📥 **Importar** | `src/PainelImportar.html` | Filtros do Fluig, prévia do arquivo e gravação na `Base_Historica` sem duplicar; atualiza o dashboard ao terminar |
+| ✉️ **Envio de resumo** | `src/PainelEnvio.html` | Período De/Até, prévia de cada e-mail, teste para você e envio real (registrado em `Log_Envios`) |
+| 👥 **Times e gestores** | `src/PainelCadastro.html` | Times (módulos, TL, e-mail) e gestores (times acompanhados) → abas `Cadastro_Times` e `Cadastro_Gestores` |
+| ⏰ **Automações** | `src/PainelAutomacoes.html` | Liga/desliga lembrete (1º dia útil) e envio automático (2º dia útil), status e histórico de envios |
 
-| **Cadastro de times e gestores** (`src/Cadastro.html`) | Menu → *Cadastro de times e gestores* | Times (módulos, TL e e-mail do TL) e gestores (times que acompanham). Grava nas abas `Cadastro_Times` e `Cadastro_Gestores` |
-| **Envio do resumo** (`src/EnvioResumo.html`) | Menu → *Enviar resumo do NPS por e-mail*, botão do dashboard (leva o período do filtro) ou botão após importar | Escolha do período (De/Até), prévia de cada e-mail, envio de teste para você e envio real. Cada envio fica registrado em `Log_Envios` |
+`src/Painel.html` é a moldura (barra superior e abas) e inclui os módulos. Cada módulo isola seu CSS (`#v-…`) e seus IDs (prefixo `d-`, `i-`, `e-`, `c-`, `a-`).
 
 ### E-mails
 

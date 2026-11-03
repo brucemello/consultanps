@@ -70,38 +70,27 @@ const COMENTARIOS_VAZIOS = ['sem comentários', 'sem comentarios', 'sem comentá
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('🚀 NPS Protheus Multi-Módulo')
+  ui.createMenu('🚀 NPS Protheus')
+    .addItem('🧭 Abrir Central NPS', 'abrirPainel')
+    .addSeparator()
+    .addItem('📊 Dashboard', 'abrirDashboard')
     .addItem('📥 Importar relatório do Fluig', 'mostrarInterfaceUpload')
-    .addItem('📊 Abrir Dashboard Executivo', 'abrirDashboard')
+    .addItem('✉️ Envio de resumo', 'mostrarEnvioResumo')
+    .addItem('👥 Times e gestores', 'mostrarCadastro')
+    .addItem('⏰ Automações', 'abrirAutomacoes')
     .addSeparator()
-    .addItem('🔄 Recalcular Dashboards e Gráficos', 'gerarAnaliseEGraficos')
-    .addItem('📸 Salvar Snapshot do NPS por Módulo', 'gravarSnapshotNPS')
-    .addSeparator()
-    .addItem('🌐 Abrir Portal de Insights CX (Fluig)', 'abrirFluig')
-    .addSeparator()
-    .addItem('👥 Cadastro de times e gestores', 'mostrarCadastro')
-    .addItem('✉️ Enviar resumo do NPS por e-mail', 'mostrarEnvioResumo')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('⏰ Automações')
-      .addItem('✅ Ativar todas (lembrete + envio automático)', 'ativarAutomacoes')
-      .addItem('📋 Ver status das automações', 'statusAutomacoes')
-      .addSeparator()
-      .addItem('Ativar lembrete de importação (1º dia útil)', 'instalarLembreteMensal')
-      .addItem('Ativar envio automático do resumo (2º dia útil)', 'instalarEnvioAutomatico')
-      .addItem('Enviar lembrete de teste agora', 'enviarLembreteTeste')
-      .addSeparator()
-      .addItem('Desativar lembrete de importação', 'removerLembreteMensal')
-      .addItem('Desativar envio automático', 'removerEnvioAutomatico'))
+    .addSubMenu(ui.createMenu('🛠 Manutenção')
+      .addItem('🔄 Recalcular abas de análise', 'gerarAnaliseEGraficos')
+      .addItem('📸 Salvar snapshot do NPS por módulo', 'gravarSnapshotNPS')
+      .addItem('🌐 Abrir Portal de Insights CX (Fluig)', 'abrirFluig'))
     .addToUi();
 }
 
-/** Web App: dashboard executivo (ou o importador com ?p=importar). */
+/** Web App: a mesma Central NPS (aba inicial por ?tab=dash|imp|env|cad|auto). */
 function doGet(e) {
-  const pagina = (e && e.parameter && e.parameter.p) === 'importar' ? 'Importador' : 'Dashboard';
-  const t = HtmlService.createTemplateFromFile(pagina);
-  t.contexto = contextoPaginas_('webapp');
-  return t.evaluate()
-    .setTitle(pagina === 'Importador' ? 'Importador NPS · Protheus' : 'Dashboard Executivo NPS · Protheus')
+  const p = (e && e.parameter) || {};
+  const tab = p.tab || (p.p === 'importar' ? 'imp' : 'dash');
+  return painelHtml_(tab, null, 'webapp')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -110,37 +99,41 @@ function include(nome) {
   return HtmlService.createHtmlOutputFromFile(nome).getContent();
 }
 
-function contextoPaginas_(modo) {
+function contextoPaginas_(modo, tab, periodoEscolhido) {
   let urlApp = '';
   try { urlApp = ScriptApp.getService().getUrl() || ''; } catch (e) { urlApp = ''; }
-  const periodo = periodoPadrao_(new Date());
   return JSON.stringify({
     modo: modo || 'dialog',
+    tabInicial: tab || 'dash',
+    periodoEscolhido: periodoEscolhido || null,
     urlApp: urlApp,
     urlFluig: URL_FLUIG,
     urlManual: URL_MANUAL,
     filtros: FILTROS_PADRAO,
-    periodo: periodo
+    periodo: periodoPadrao_(new Date())
   });
 }
 
-function abrirImportadorAutomatico() {
-  mostrarInterfaceUpload();
+function painelHtml_(tab, periodoEscolhido, modo) {
+  const t = HtmlService.createTemplateFromFile('Painel');
+  t.contexto = contextoPaginas_(modo || 'dialog', tab, periodoEscolhido);
+  return t.evaluate().setTitle('Central NPS · Protheus');
 }
 
-function mostrarInterfaceUpload() {
-  const t = HtmlService.createTemplateFromFile('Importador');
-  t.contexto = contextoPaginas_('dialog');
-  const html = t.evaluate().setWidth(920).setHeight(720).setTitle('Importador NPS · Protheus');
+/** Abre a Central NPS em tela grande dentro da planilha, já na aba pedida. */
+function abrirPainel(tab, periodoEscolhido) {
+  const html = painelHtml_(typeof tab === 'string' ? tab : 'dash', periodoEscolhido || null).setWidth(1600).setHeight(950);
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
 
-/** Abre o Dashboard Executivo (HTML) em tela grande dentro da própria planilha. */
-function abrirDashboard() {
-  const t = HtmlService.createTemplateFromFile('Dashboard');
-  t.contexto = contextoPaginas_('dialog');
-  const html = t.evaluate().setWidth(1600).setHeight(950).setTitle('Dashboard Executivo NPS · Protheus');
-  SpreadsheetApp.getUi().showModalDialog(html, ' ');
+// Atalhos do menu (nomes mantidos por compatibilidade)
+function abrirDashboard() { abrirPainel('dash'); }
+function mostrarInterfaceUpload() { abrirPainel('imp'); }
+function abrirImportadorAutomatico() { abrirPainel('imp'); }
+function mostrarCadastro() { abrirPainel('cad'); }
+function abrirAutomacoes() { abrirPainel('auto'); }
+function mostrarEnvioResumo(periodoJson) {
+  abrirPainel('env', periodoJson ? periodoDeMeses_(JSON.parse(periodoJson)) : null);
 }
 
 function abrirFluig() {

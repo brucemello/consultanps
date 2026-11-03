@@ -1,92 +1,5 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <base target="_top">
-  <meta charset="utf-8">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    :root {
-      --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --bg: #f4f6fb; --card: #ffffff;
-      --navy: #0b1f3a; --blue: #2563eb; --blue-soft: #eff4ff;
-      --green: #16a34a; --green-soft: #ecfdf3; --amber: #b45309; --amber-soft: #fff7e6; --red: #dc2626; --red-soft: #fef2f2;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
-    .wrap { max-width: 880px; margin: 0 auto; padding: 18px; }
-
-    .hero {
-      background: linear-gradient(120deg, #0b1f3a 0%, #13325e 60%, #1d4ed8 140%);
-      color: #fff; border-radius: 16px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px;
-    }
-    .hero small { text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: #9fb6dc; font-weight: 600; }
-    .hero h1 { font-size: 21px; font-weight: 800; margin-top: 4px; }
-    .hero p { color: #c6d4ee; font-size: 13px; margin-top: 4px; }
-    .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-    .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px;
-           text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: .15s; white-space: nowrap; font-family: inherit; }
-    .btn-ghost { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.25); }
-    .btn-ghost:hover { background: rgba(255,255,255,.2); }
-    .btn-primary { background: var(--blue); color: #fff; }
-    .btn-primary:hover { background: #1d4ed8; }
-    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
-    .btn-light { background: #fff; color: var(--ink); border-color: var(--line); }
-    .btn-light:hover { border-color: #cbd5e1; }
-
-    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
-    .step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
-    .step .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 12px; background: #e2e8f0; color: var(--muted); flex: none; }
-    .step b { display: block; font-size: 13px; }
-    .step span { font-size: 12px; color: var(--muted); }
-    .step.active { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
-    .step.active .n { background: var(--blue); color: #fff; }
-    .step.done .n { background: var(--green); color: #fff; }
-
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
-    .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
-    .card-head h2 { font-size: 15px; font-weight: 700; }
-    .card-head a { color: var(--blue); font-weight: 600; font-size: 13px; text-decoration: none; }
-
-    .filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    .filter { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
-    .filter label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
-    .filter div { font-weight: 600; font-size: 13px; margin-top: 2px; }
-    .filter.wide { background: var(--blue-soft); border-color: #c7d7fe; }
-
-    .drop { border: 2px dashed #cbd5e1; border-radius: 14px; padding: 30px 16px; text-align: center; cursor: pointer; transition: .15s; background: #fbfcfe; }
-    .drop:hover, .drop.over { border-color: var(--blue); background: var(--blue-soft); }
-    .drop .ico { width: 48px; height: 48px; border-radius: 12px; background: var(--blue-soft); color: var(--blue); display: grid; place-items: center; margin: 0 auto 10px; }
-    .drop h3 { font-size: 15px; }
-    .drop p { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
-
-    .summary { display: none; }
-    .file-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; }
-    .file-row .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-    .stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-    .stat label { font-size: 11px; color: var(--muted); font-weight: 600; }
-    .stat div { font-size: 20px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .stat .sub { font-size: 11.5px; font-weight: 500; color: var(--muted); }
-
-    .alert { border-radius: 10px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 8px; display: flex; gap: 8px; align-items: flex-start; }
-    .alert.warn { background: var(--amber-soft); color: var(--amber); }
-    .alert.err { background: var(--red-soft); color: var(--red); }
-    .alert.ok { background: var(--green-soft); color: var(--green); }
-    .alert.info { background: var(--blue-soft); color: #1e40af; }
-
-    .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
-    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none !important; }
-
-    @media (max-width: 720px) {
-      .hero { flex-direction: column; align-items: flex-start; }
-      .steps, .stats { grid-template-columns: 1fr 1fr; }
-      .filters { grid-template-columns: 1fr 1fr; }
-    }
-  </style>
-</head>
-<body>
+<!-- Módulo do Painel gerado a partir de Importador.html -->
+<section class="view" id="v-imp">
 <div class="wrap">
 
   <div class="hero">
@@ -96,67 +9,141 @@
       <p>Extraia do Portal de Insights CX, solte o arquivo aqui e o dashboard é atualizado.</p>
     </div>
     <div class="hero-actions">
-      <a class="btn btn-ghost" id="lnkFluig" target="_blank">Portal Fluig ↗</a>
-      <a class="btn btn-ghost" id="lnkDash" target="_blank">Dashboard ↗</a>
+      <a class="btn btn-ghost" id="i-lnkFluig" target="_blank">Portal Fluig ↗</a>
+      <a class="btn btn-ghost" id="i-lnkDash">📊 Ver dashboard</a>
     </div>
   </div>
 
   <div class="steps">
-    <div class="step active" id="st1"><div class="n">1</div><div><b>Extrair no Fluig</b><span>com os filtros abaixo</span></div></div>
-    <div class="step" id="st2"><div class="n">2</div><div><b>Conferir arquivo</b><span>prévia antes de gravar</span></div></div>
-    <div class="step" id="st3"><div class="n">3</div><div><b>Importar</b><span>sem duplicar registros</span></div></div>
+    <div class="step active" id="i-st1"><div class="n">1</div><div><b>Extrair no Fluig</b><span>com os filtros abaixo</span></div></div>
+    <div class="step" id="i-st2"><div class="n">2</div><div><b>Conferir arquivo</b><span>prévia antes de gravar</span></div></div>
+    <div class="step" id="i-st3"><div class="n">3</div><div><b>Importar</b><span>sem duplicar registros</span></div></div>
   </div>
 
   <div class="card">
     <div class="card-head">
       <h2>Filtros para aplicar no Portal de Insights CX</h2>
-      <a id="lnkManual" target="_blank">Manual de extração (PDF) ↗</a>
+      <a id="i-lnkManual" target="_blank">Manual de extração (PDF) ↗</a>
     </div>
-    <div class="filters" id="filters"></div>
+    <div class="filters" id="i-filters"></div>
   </div>
 
   <div class="card">
-    <div id="dropArea">
-      <div class="drop" id="drop">
+    <div id="i-dropArea">
+      <div class="drop" id="i-drop">
         <div class="ico">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </div>
         <h3>Arraste a planilha exportada do Fluig</h3>
         <p>ou clique para escolher · .xlsx, .xls ou .csv</p>
-        <input type="file" id="file" accept=".xlsx,.xls,.csv" class="hidden">
+        <input type="file" id="i-file" accept=".xlsx,.xls,.csv" class="hidden">
       </div>
     </div>
 
-    <div class="summary" id="summary">
+    <div class="summary" id="i-summary">
       <div class="file-row">
-        <div class="name" id="fileName"></div>
-        <button class="btn btn-light" id="btnTrocar">Trocar arquivo</button>
+        <div class="name" id="i-fileName"></div>
+        <button class="btn btn-light" id="i-btnTrocar">Trocar arquivo</button>
       </div>
       <div class="stats">
-        <div class="stat"><label>Linhas</label><div id="sLinhas">–</div></div>
-        <div class="stat"><label>Respondidas</label><div id="sResp">–</div></div>
-        <div class="stat"><label>NPS do arquivo</label><div id="sNps">–</div></div>
-        <div class="stat"><label>Período</label><div class="sub" id="sPeriodo" style="font-size:13px;font-weight:700;color:var(--ink);margin-top:6px">–</div></div>
+        <div class="stat"><label>Linhas</label><div id="i-sLinhas">–</div></div>
+        <div class="stat"><label>Respondidas</label><div id="i-sResp">–</div></div>
+        <div class="stat"><label>NPS do arquivo</label><div id="i-sNps">–</div></div>
+        <div class="stat"><label>Período</label><div class="sub" id="i-sPeriodo" style="font-size:13px;font-weight:700;color:var(--ink);margin-top:6px">–</div></div>
       </div>
-      <div id="alerts"></div>
+      <div id="i-alerts"></div>
       <div class="actions">
-        <button class="btn btn-primary" id="btnImportar">Importar para a Base Histórica</button>
+        <button class="btn btn-primary" id="i-btnImportar">Importar para a Base Histórica</button>
       </div>
     </div>
   </div>
 
 </div>
+</section>
+<style>
+#v-imp {
+      --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --bg: #f4f6fb; --card: #ffffff;
+      --navy: #0b1f3a; --blue: #2563eb; --blue-soft: #eff4ff;
+      --green: #16a34a; --green-soft: #ecfdf3; --amber: #b45309; --amber-soft: #fff7e6; --red: #dc2626; --red-soft: #fef2f2;
+    }
+#v-imp * { box-sizing: border-box; margin: 0; padding: 0; }
+#v-imp { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
+#v-imp .wrap { max-width: 880px; margin: 0 auto; padding: 18px; }
+#v-imp .hero {
+      background: linear-gradient(120deg, #0b1f3a 0%, #13325e 60%, #1d4ed8 140%);
+      color: #fff; border-radius: 16px; padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+#v-imp .hero small { text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: #9fb6dc; font-weight: 600; }
+#v-imp .hero h1 { font-size: 21px; font-weight: 800; margin-top: 4px; }
+#v-imp .hero p { color: #c6d4ee; font-size: 13px; margin-top: 4px; }
+#v-imp .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+#v-imp .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px;
+           text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: .15s; white-space: nowrap; font-family: inherit; }
+#v-imp .btn-ghost { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.25); }
+#v-imp .btn-ghost:hover { background: rgba(255,255,255,.2); }
+#v-imp .btn-primary { background: var(--blue); color: #fff; }
+#v-imp .btn-primary:hover { background: #1d4ed8; }
+#v-imp .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+#v-imp .btn-light { background: #fff; color: var(--ink); border-color: var(--line); }
+#v-imp .btn-light:hover { border-color: #cbd5e1; }
+#v-imp .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+#v-imp .step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
+#v-imp .step .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 12px; background: #e2e8f0; color: var(--muted); flex: none; }
+#v-imp .step b { display: block; font-size: 13px; }
+#v-imp .step span { font-size: 12px; color: var(--muted); }
+#v-imp .step.active { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+#v-imp .step.active .n { background: var(--blue); color: #fff; }
+#v-imp .step.done .n { background: var(--green); color: #fff; }
+#v-imp .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+#v-imp .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
+#v-imp .card-head h2 { font-size: 15px; font-weight: 700; }
+#v-imp .card-head a { color: var(--blue); font-weight: 600; font-size: 13px; text-decoration: none; }
+#v-imp .filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+#v-imp .filter { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+#v-imp .filter label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+#v-imp .filter div { font-weight: 600; font-size: 13px; margin-top: 2px; }
+#v-imp .filter.wide { background: var(--blue-soft); border-color: #c7d7fe; }
+#v-imp .drop { border: 2px dashed #cbd5e1; border-radius: 14px; padding: 30px 16px; text-align: center; cursor: pointer; transition: .15s; background: #fbfcfe; }
+#v-imp .drop:hover, #v-imp .drop.over { border-color: var(--blue); background: var(--blue-soft); }
+#v-imp .drop .ico { width: 48px; height: 48px; border-radius: 12px; background: var(--blue-soft); color: var(--blue); display: grid; place-items: center; margin: 0 auto 10px; }
+#v-imp .drop h3 { font-size: 15px; }
+#v-imp .drop p { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+#v-imp .summary { display: none; }
+#v-imp .file-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; }
+#v-imp .file-row .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#v-imp .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+#v-imp .stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+#v-imp .stat label { font-size: 11px; color: var(--muted); font-weight: 600; }
+#v-imp .stat div { font-size: 20px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+#v-imp .stat .sub { font-size: 11.5px; font-weight: 500; color: var(--muted); }
+#v-imp .alert { border-radius: 10px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 8px; display: flex; gap: 8px; align-items: flex-start; }
+#v-imp .alert.warn { background: var(--amber-soft); color: var(--amber); }
+#v-imp .alert.err { background: var(--red-soft); color: var(--red); }
+#v-imp .alert.ok { background: var(--green-soft); color: var(--green); }
+#v-imp .alert.info { background: var(--blue-soft); color: #1e40af; }
+#v-imp .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+#v-imp .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: v-imp-spin .8s linear infinite; }
+@keyframes v-imp-spin { to { transform: rotate(360deg); } }
+#v-imp .hidden { display: none !important; }
+@media (max-width: 720px) {#v-imp .hero { flex-direction: column; align-items: flex-start; }
+#v-imp .steps, #v-imp .stats { grid-template-columns: 1fr 1fr; }
+#v-imp .filters { grid-template-columns: 1fr 1fr; }
 
+    }
+
+  </style>
 <script>
-  const CTX = JSON.parse(<?= contexto ?>);
-  const $ = id => document.getElementById(id);
+(function () {
+  const ROOT = document.getElementById('v-imp');
+
+  const CTX = window.PAINEL.ctx;
+  const $ = id => document.getElementById('i-' + id);
   let matriz = null, nomeArquivo = '';
 
   $('lnkFluig').href = CTX.urlFluig;
   $('lnkManual').href = CTX.urlManual;
-  const abrirDash = e => { e.preventDefault(); google.script.run.abrirDashboard(); };
-  if (CTX.modo === 'dialog') { $('lnkDash').removeAttribute('target'); $('lnkDash').href = '#'; $('lnkDash').addEventListener('click', abrirDash); }
-  else if (CTX.urlApp) $('lnkDash').href = CTX.urlApp; else $('lnkDash').classList.add('hidden');
+  const abrirDash = e => { e.preventDefault(); PAINEL.ir('dash'); };
+  $('lnkDash').removeAttribute('target'); $('lnkDash').href = '#'; $('lnkDash').addEventListener('click', abrirDash);
 
   const F = CTX.filtros;
   $('filters').innerHTML = [
@@ -282,10 +269,12 @@
         btn.innerHTML = 'Importar para a Base Histórica';
         if (res.success) {
           setStep(4);
-          $('alerts').innerHTML = `<div class="alert ok">✅ ${res.message}</div><div class="actions"><button class="btn btn-light" id="btnResumo">✉ Enviar resumo aos times</button><a class="btn btn-primary" id="btnVerDash" href="${CTX.modo === 'dialog' ? '#' : CTX.urlApp}" target="_blank">Abrir Dashboard</a></div>`;
-          if (CTX.modo === 'dialog') { const b = $('btnVerDash'); b.removeAttribute('target'); b.addEventListener('click', abrirDash); }
-          const br = $('btnResumo');
-          if (CTX.modo === 'dialog') br.addEventListener('click', () => google.script.run.mostrarEnvioResumo()); else br.classList.add('hidden');
+          $('alerts').innerHTML = `<div class="alert ok">✅ ${res.message}</div><div class="actions"><button class="btn btn-light" id="i-btnResumo">✉ Enviar resumo aos times</button><button class="btn btn-primary" id="i-btnVerDash">Ver no Dashboard</button></div>`;
+          $('btnVerDash').addEventListener('click', abrirDash);
+          $('btnResumo').addEventListener('click', () => PAINEL.ir('env'));
+          PAINEL.modulos.dash && PAINEL.modulos.dash.recarregar();
+          PAINEL.modulos.env && PAINEL.modulos.env.invalidar();
+          PAINEL.modulos.auto && PAINEL.modulos.auto.invalidar();
           btn.classList.add('hidden');
         } else {
           mostrarErro(res.message); btn.disabled = false;
@@ -306,6 +295,8 @@
     $('btnImportar').classList.remove('hidden'); setStep(1);
   }
 
+  PAINEL.modulos.imp = { mostrar() { if ($('btnImportar').classList.contains('hidden')) reset(); } };
+
   function setStep(n) {
     [1, 2, 3].forEach(i => {
       const el = $('st' + i);
@@ -313,6 +304,6 @@
       el.classList.toggle('done', i < n);
     });
   }
+
+})();
 </script>
-</body>
-</html>

@@ -1,127 +1,17 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <base target="_top">
-  <meta charset="utf-8">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-  <style>
-    :root {
-      --ink: #0f172a; --ink2: #334155; --muted: #64748b; --line: #e5e9f2; --bg: #f3f5fa; --card: #fff;
-      --navy: #0b1f3a; --blue: #2563eb; --blue-soft: #eef3ff;
-      --prom: #16a34a; --prom-soft: #e9f8ef; --neu: #f59e0b; --neu-soft: #fff6e0; --det: #e5484d; --det-soft: #fdeced;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
-    .num { font-variant-numeric: tabular-nums; }
-
-    header.top { background: linear-gradient(115deg, #0b1f3a 0%, #13325e 70%, #1e40af 130%); color: #fff; padding: 18px 28px 64px; }
-    .top-inner { max-width: 1360px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
-    .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 700; color: #93b0e0; }
-    h1 { font-size: 24px; font-weight: 800; margin-top: 4px; letter-spacing: -.01em; }
-    .meta { color: #bcd0f0; font-size: 12.5px; margin-top: 6px; }
-    .top-actions { display: flex; gap: 8px; }
-    .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px; text-decoration: none;
-           border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; cursor: pointer; font-family: inherit; }
-    .btn:hover { background: rgba(255,255,255,.18); }
-
-    main { max-width: 1360px; margin: -46px auto 40px; padding: 0 28px; }
-
-    .filterbar { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
-                 box-shadow: 0 6px 20px -12px rgba(15,23,42,.25); position: sticky; top: 8px; z-index: 5; }
-    .fld { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
-    .fld label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; }
-    .fld select { font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 8px 30px 8px 10px; background: #f8fafc;
-                  appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-                  background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; }
-    .fld select:focus { outline: 2px solid var(--blue-soft); border-color: var(--blue); }
-    .reset { margin-left: auto; font-size: 13px; color: var(--blue); font-weight: 600; background: none; border: none; cursor: pointer; padding: 8px; font-family: inherit; }
-    .period-tag { font-size: 12px; color: var(--muted); padding: 8px 0; }
-
-    .grid { display: grid; gap: 14px; margin-top: 14px; }
-    .g-kpi { grid-template-columns: 1.35fr repeat(4, 1fr); }
-    .g-2 { grid-template-columns: 1fr 1fr; }
-    .g-32 { grid-template-columns: 1.5fr 1fr; }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; min-width: 0; }
-    .card h3 { font-size: 14px; font-weight: 700; color: var(--ink); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .card h3 small { font-size: 12px; color: var(--muted); font-weight: 500; }
-    .card .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-    .kpi label { font-size: 12px; color: var(--muted); font-weight: 600; }
-    .kpi .v { font-size: 30px; font-weight: 800; margin-top: 6px; letter-spacing: -.02em; }
-    .kpi .s { font-size: 12px; color: var(--muted); margin-top: 4px; }
-    .kpi.nps { display: flex; gap: 14px; align-items: center; }
-    .kpi.nps .zone { display: inline-block; margin-top: 6px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
-    .gauge { width: 150px; flex: none; }
-
-    .mix { margin-top: 14px; }
-    .mixbar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #eef1f6; }
-    .mixbar div { height: 100%; }
-    .mixleg { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 10px; gap: 8px; }
-    .mixleg div { font-size: 12px; color: var(--muted); }
-    .mixleg b { display: block; font-size: 18px; color: var(--ink); font-weight: 800; }
-    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-
-    .chart { position: relative; height: 290px; margin-top: 10px; }
-    .chart.sm { height: 240px; }
-
-    .findings { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .findings li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; line-height: 1.45; color: var(--ink2); }
-    .findings .ic { width: 26px; height: 26px; border-radius: 8px; flex: none; display: grid; place-items: center; font-size: 13px; }
-
-    .cloud { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: center; padding: 14px 4px; min-height: 220px; }
-    .cloud span { font-weight: 700; cursor: pointer; line-height: 1.1; transition: .15s; letter-spacing: -.01em; }
-    .cloud span:hover { opacity: .65; }
-    .legend-inline { display: flex; gap: 12px; font-size: 11.5px; color: var(--muted); margin-top: 4px; flex-wrap: wrap; }
-
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 9px 10px; background: #f6f8fc; border-bottom: 1px solid var(--line); position: sticky; top: 0; }
-    td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink2); }
-    tr:hover td { background: #fafbfe; }
-    .tbl-wrap { max-height: 460px; overflow: auto; border-radius: 10px; }
-    .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
-    .p-crit { background: var(--det-soft); color: #b42318; } .p-med { background: var(--neu-soft); color: #a15c07; } .p-low { background: var(--prom-soft); color: #067647; }
-    .p-blue { background: var(--blue-soft); color: #1e40af; }
-    .note { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; font-weight: 800; font-size: 13px; }
-    .n-d { background: var(--det-soft); color: #b42318; } .n-n { background: var(--neu-soft); color: #a15c07; } .n-p { background: var(--prom-soft); color: #067647; }
-    .comment { color: var(--ink); line-height: 1.45; }
-    .muted { color: var(--muted); font-size: 12px; }
-
-    .toolbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
-    .search { flex: 1; min-width: 200px; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; font-family: inherit; font-size: 13px; background: #f8fafc; }
-    .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--ink2); cursor: pointer; font-family: inherit; }
-    .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); }
-
-    .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 13px; }
-    .loading { position: fixed; inset: 0; background: rgba(243,245,250,.85); display: grid; place-items: center; z-index: 50; }
-    .loading .box { text-align: center; color: var(--ink2); font-weight: 600; }
-    .spin { width: 34px; height: 34px; border: 3px solid #dbe3f3; border-top-color: var(--blue); border-radius: 50%; animation: s .8s linear infinite; margin: 0 auto 12px; }
-    @keyframes s { to { transform: rotate(360deg); } }
-    .hidden { display: none !important; }
-
-    @media (max-width: 1100px) { .g-kpi { grid-template-columns: 1fr 1fr; } .g-kpi .kpi.nps { grid-column: span 2; } .g-32, .g-2 { grid-template-columns: 1fr; } }
-    @media (max-width: 640px) { main, header.top { padding-left: 14px; padding-right: 14px; } .g-kpi { grid-template-columns: 1fr; } .g-kpi .kpi.nps { grid-column: auto; } .fld { min-width: 46%; } }
-    @media print {
-      body { background: #fff; } header.top { padding-bottom: 18px; } main { margin-top: 0; }
-      .filterbar { position: static; box-shadow: none; } .top-actions, .reset, .toolbar { display: none; }
-      .tbl-wrap { max-height: none; overflow: visible; } .card { break-inside: avoid; }
-    }
-  </style>
-</head>
-<body>
-<div class="loading" id="loading"><div class="box"><div class="spin"></div>Carregando dados do NPS…</div></div>
+<!-- Módulo do Painel gerado a partir de Dashboard.html -->
+<section class="view" id="v-dash">
+<div class="loading" id="d-loading"><div class="box"><div class="spin"></div>Carregando dados do NPS…</div></div>
 
 <header class="top">
   <div class="top-inner">
     <div>
       <div class="eyebrow">NPS Produto · Protheus</div>
-      <h1 id="titulo">Dashboard Executivo NPS</h1>
-      <div class="meta" id="meta"></div>
+      <h1 id="d-titulo">Dashboard Executivo NPS</h1>
+      <div class="meta" id="d-meta"></div>
     </div>
     <div class="top-actions">
-      <a class="btn" id="btnImportar" target="_blank">↥ Importar relatório</a>
-      <button class="btn" id="btnResumo">✉ Enviar resumo</button>
+      <a class="btn" id="d-btnImportar" target="_blank">↥ Importar relatório</a>
+      <button class="btn" id="d-btnResumo">✉ Enviar resumo</button>
       <button class="btn" onclick="window.print()">⎙ Exportar PDF</button>
     </div>
   </div>
@@ -129,65 +19,65 @@
 
 <main>
   <div class="filterbar">
-    <div class="fld"><label>Módulo / Produto</label><select id="fMod"></select></div>
-    <div class="fld"><label>De</label><select id="fDe"></select></div>
-    <div class="fld"><label>Até</label><select id="fAte"></select></div>
-    <div class="fld"><label>Tipo do Cliente</label><select id="fTipo"></select></div>
-    <div class="fld"><label>País</label><select id="fPais"></select></div>
-    <button class="reset" id="btnReset">Restaurar padrão</button>
+    <div class="fld"><label>Módulo / Produto</label><select id="d-fMod"></select></div>
+    <div class="fld"><label>De</label><select id="d-fDe"></select></div>
+    <div class="fld"><label>Até</label><select id="d-fAte"></select></div>
+    <div class="fld"><label>Tipo do Cliente</label><select id="d-fTipo"></select></div>
+    <div class="fld"><label>País</label><select id="d-fPais"></select></div>
+    <button class="reset" id="d-btnReset">Restaurar padrão</button>
   </div>
 
   <section class="grid g-kpi">
     <div class="card kpi nps">
-      <svg class="gauge" viewBox="0 0 200 120" id="gauge"></svg>
+      <svg class="gauge" viewBox="0 0 200 120" id="d-gauge"></svg>
       <div>
         <label>NPS do período</label>
-        <div class="v num" id="kNps">–</div>
-        <span class="zone" id="kZona"></span>
+        <div class="v num" id="d-kNps">–</div>
+        <span class="zone" id="d-kZona"></span>
       </div>
     </div>
-    <div class="card kpi"><label>Abordagens</label><div class="v num" id="kAbord">–</div><div class="s">pesquisas enviadas</div></div>
-    <div class="card kpi"><label>Respostas válidas</label><div class="v num" id="kResp">–</div><div class="s" id="kRespS"></div></div>
-    <div class="card kpi"><label>Taxa de aderência</label><div class="v num" id="kAder">–</div><div class="s">respostas ÷ abordagens</div></div>
-    <div class="card kpi"><label>Comentários</label><div class="v num" id="kCom">–</div><div class="s" id="kComS"></div></div>
+    <div class="card kpi"><label>Abordagens</label><div class="v num" id="d-kAbord">–</div><div class="s">pesquisas enviadas</div></div>
+    <div class="card kpi"><label>Respostas válidas</label><div class="v num" id="d-kResp">–</div><div class="s" id="d-kRespS"></div></div>
+    <div class="card kpi"><label>Taxa de aderência</label><div class="v num" id="d-kAder">–</div><div class="s">respostas ÷ abordagens</div></div>
+    <div class="card kpi"><label>Comentários</label><div class="v num" id="d-kCom">–</div><div class="s" id="d-kComS"></div></div>
   </section>
 
   <section class="grid g-32">
     <div class="card">
-      <h3>Evolução do NPS por mês <small id="trend"></small></h3>
+      <h3>Evolução do NPS por mês <small id="d-trend"></small></h3>
       <div class="desc">Faixas: crítico &lt; 0 · razoável 0–49 · muito bom 50–74 · excelente ≥ 75</div>
-      <div class="chart"><canvas id="cNps"></canvas></div>
+      <div class="chart"><canvas id="d-cNps"></canvas></div>
     </div>
     <div class="card">
       <h3>Composição das respostas</h3>
       <div class="mix">
-        <div class="mixbar" id="mixbar"></div>
+        <div class="mixbar" id="d-mixbar"></div>
         <div class="mixleg">
-          <div><span class="dot" style="background:var(--prom)"></span>Promotores<b class="num" id="pP">–</b><span class="num" id="pPn"></span></div>
-          <div><span class="dot" style="background:var(--neu)"></span>Neutros<b class="num" id="pN">–</b><span class="num" id="pNn"></span></div>
-          <div><span class="dot" style="background:var(--det)"></span>Detratores<b class="num" id="pD">–</b><span class="num" id="pDn"></span></div>
+          <div><span class="dot" style="background:var(--prom)"></span>Promotores<b class="num" id="d-pP">–</b><span class="num" id="d-pPn"></span></div>
+          <div><span class="dot" style="background:var(--neu)"></span>Neutros<b class="num" id="d-pN">–</b><span class="num" id="d-pNn"></span></div>
+          <div><span class="dot" style="background:var(--det)"></span>Detratores<b class="num" id="d-pD">–</b><span class="num" id="d-pDn"></span></div>
         </div>
       </div>
-      <div class="chart sm"><canvas id="cNotas"></canvas></div>
+      <div class="chart sm"><canvas id="d-cNotas"></canvas></div>
     </div>
   </section>
 
   <section class="grid g-2">
     <div class="card">
       <h3>Promotores, neutros e detratores por mês</h3>
-      <div class="chart"><canvas id="cPnd"></canvas></div>
+      <div class="chart"><canvas id="d-cPnd"></canvas></div>
     </div>
     <div class="card">
       <h3>Causas raiz nos comentários</h3>
       <div class="desc">Pilares de CX identificados por palavras-chave</div>
-      <div class="chart"><canvas id="cPilares"></canvas></div>
+      <div class="chart"><canvas id="d-cPilares"></canvas></div>
     </div>
   </section>
 
   <section class="grid g-2">
     <div class="card">
       <h3>Principais achados</h3>
-      <ul class="findings" id="achados"></ul>
+      <ul class="findings" id="d-achados"></ul>
     </div>
     <div class="card">
       <h3>Termos mais citados <small>clique para filtrar os comentários</small></h3>
@@ -196,49 +86,157 @@
         <span><span class="dot" style="background:var(--neu)"></span>7–8</span>
         <span><span class="dot" style="background:var(--prom)"></span>9–10</span>
       </div>
-      <div class="cloud" id="cloud"></div>
+      <div class="cloud" id="d-cloud"></div>
     </div>
   </section>
 
-  <section class="grid" id="secModulos">
+  <section class="grid" id="d-secModulos">
     <div class="card">
       <h3>NPS e comentários por módulo</h3>
-      <div class="chart sm"><canvas id="cMods"></canvas></div>
+      <div class="chart sm"><canvas id="d-cMods"></canvas></div>
     </div>
   </section>
 
   <section class="grid">
     <div class="card">
       <h3>Ranking de causas raiz</h3>
-      <div class="tbl-wrap"><table id="tRank"></table></div>
+      <div class="tbl-wrap"><table id="d-tRank"></table></div>
     </div>
   </section>
 
   <section class="grid">
-    <div class="card" id="cardQuali">
-      <h3>Análise qualitativa dos comentários <small id="qualiCount"></small></h3>
+    <div class="card" id="d-cardQuali">
+      <h3>Análise qualitativa dos comentários <small id="d-qualiCount"></small></h3>
       <div class="toolbar">
-        <input class="search" id="qBusca" placeholder="Buscar por cliente, termo ou comentário…">
+        <input class="search" id="d-qBusca" placeholder="Buscar por cliente, termo ou comentário…">
         <button class="chip on" data-cl="">Todos</button>
         <button class="chip" data-cl="Detrator">Detratores</button>
         <button class="chip" data-cl="Neutro">Neutros</button>
         <button class="chip" data-cl="Promotor">Promotores</button>
       </div>
-      <div class="tbl-wrap"><table id="tQuali"></table></div>
+      <div class="tbl-wrap"><table id="d-tQuali"></table></div>
     </div>
   </section>
 
   <section class="grid">
     <div class="card">
-      <h3>Plano de ação estruturado <small id="planoCount"></small></h3>
-      <div class="tbl-wrap"><table id="tPlano"></table></div>
+      <h3>Plano de ação estruturado <small id="d-planoCount"></small></h3>
+      <div class="tbl-wrap"><table id="d-tPlano"></table></div>
     </div>
   </section>
 </main>
+</section>
+<style>
+#v-dash {
+      --ink: #0f172a; --ink2: #334155; --muted: #64748b; --line: #e5e9f2; --bg: #f3f5fa; --card: #fff;
+      --navy: #0b1f3a; --blue: #2563eb; --blue-soft: #eef3ff;
+      --prom: #16a34a; --prom-soft: #e9f8ef; --neu: #f59e0b; --neu-soft: #fff6e0; --det: #e5484d; --det-soft: #fdeced;
+    }
+#v-dash * { box-sizing: border-box; margin: 0; padding: 0; }
+#v-dash { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
+#v-dash .num { font-variant-numeric: tabular-nums; }
+#v-dash header.top { background: linear-gradient(115deg, #0b1f3a 0%, #13325e 70%, #1e40af 130%); color: #fff; padding: 18px 28px 64px; }
+#v-dash .top-inner { max-width: 1360px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+#v-dash .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 700; color: #93b0e0; }
+#v-dash h1 { font-size: 24px; font-weight: 800; margin-top: 4px; letter-spacing: -.01em; }
+#v-dash .meta { color: #bcd0f0; font-size: 12.5px; margin-top: 6px; }
+#v-dash .top-actions { display: flex; gap: 8px; }
+#v-dash .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px; text-decoration: none;
+           border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; cursor: pointer; font-family: inherit; }
+#v-dash .btn:hover { background: rgba(255,255,255,.18); }
+#v-dash main { max-width: 1360px; margin: -46px auto 40px; padding: 0 28px; }
+#v-dash .filterbar { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+                 box-shadow: 0 6px 20px -12px rgba(15,23,42,.25); position: sticky; top: 8px; z-index: 5; }
+#v-dash .fld { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+#v-dash .fld label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; }
+#v-dash .fld select { font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 8px 30px 8px 10px; background: #f8fafc;
+                  appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+                  background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; }
+#v-dash .fld select:focus { outline: 2px solid var(--blue-soft); border-color: var(--blue); }
+#v-dash .reset { margin-left: auto; font-size: 13px; color: var(--blue); font-weight: 600; background: none; border: none; cursor: pointer; padding: 8px; font-family: inherit; }
+#v-dash .period-tag { font-size: 12px; color: var(--muted); padding: 8px 0; }
+#v-dash .grid { display: grid; gap: 14px; margin-top: 14px; }
+#v-dash .g-kpi { grid-template-columns: 1.35fr repeat(4, 1fr); }
+#v-dash .g-2 { grid-template-columns: 1fr 1fr; }
+#v-dash .g-32 { grid-template-columns: 1.5fr 1fr; }
+#v-dash .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; min-width: 0; }
+#v-dash .card h3 { font-size: 14px; font-weight: 700; color: var(--ink); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#v-dash .card h3 small { font-size: 12px; color: var(--muted); font-weight: 500; }
+#v-dash .card .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+#v-dash .kpi label { font-size: 12px; color: var(--muted); font-weight: 600; }
+#v-dash .kpi .v { font-size: 30px; font-weight: 800; margin-top: 6px; letter-spacing: -.02em; }
+#v-dash .kpi .s { font-size: 12px; color: var(--muted); margin-top: 4px; }
+#v-dash .kpi.nps { display: flex; gap: 14px; align-items: center; }
+#v-dash .kpi.nps .zone { display: inline-block; margin-top: 6px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+#v-dash .gauge { width: 150px; flex: none; }
+#v-dash .mix { margin-top: 14px; }
+#v-dash .mixbar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #eef1f6; }
+#v-dash .mixbar div { height: 100%; }
+#v-dash .mixleg { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 10px; gap: 8px; }
+#v-dash .mixleg div { font-size: 12px; color: var(--muted); }
+#v-dash .mixleg b { display: block; font-size: 18px; color: var(--ink); font-weight: 800; }
+#v-dash .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+#v-dash .chart { position: relative; height: 290px; margin-top: 10px; }
+#v-dash .chart.sm { height: 240px; }
+#v-dash .findings { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+#v-dash .findings li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; line-height: 1.45; color: var(--ink2); }
+#v-dash .findings .ic { width: 26px; height: 26px; border-radius: 8px; flex: none; display: grid; place-items: center; font-size: 13px; }
+#v-dash .cloud { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: center; padding: 14px 4px; min-height: 220px; }
+#v-dash .cloud span { font-weight: 700; cursor: pointer; line-height: 1.1; transition: .15s; letter-spacing: -.01em; }
+#v-dash .cloud span:hover { opacity: .65; }
+#v-dash .legend-inline { display: flex; gap: 12px; font-size: 11.5px; color: var(--muted); margin-top: 4px; flex-wrap: wrap; }
+#v-dash table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+#v-dash th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 9px 10px; background: #f6f8fc; border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+#v-dash td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink2); }
+#v-dash tr:hover td { background: #fafbfe; }
+#v-dash .tbl-wrap { max-height: 460px; overflow: auto; border-radius: 10px; }
+#v-dash .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+#v-dash .p-crit { background: var(--det-soft); color: #b42318; }
+#v-dash .p-med { background: var(--neu-soft); color: #a15c07; }
+#v-dash .p-low { background: var(--prom-soft); color: #067647; }
+#v-dash .p-blue { background: var(--blue-soft); color: #1e40af; }
+#v-dash .note { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; font-weight: 800; font-size: 13px; }
+#v-dash .n-d { background: var(--det-soft); color: #b42318; }
+#v-dash .n-n { background: var(--neu-soft); color: #a15c07; }
+#v-dash .n-p { background: var(--prom-soft); color: #067647; }
+#v-dash .comment { color: var(--ink); line-height: 1.45; }
+#v-dash .muted { color: var(--muted); font-size: 12px; }
+#v-dash .toolbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+#v-dash .search { flex: 1; min-width: 200px; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; font-family: inherit; font-size: 13px; background: #f8fafc; }
+#v-dash .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--ink2); cursor: pointer; font-family: inherit; }
+#v-dash .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+#v-dash .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 13px; }
+#v-dash .loading { position: fixed; inset: 0; background: rgba(243,245,250,.85); display: grid; place-items: center; z-index: 50; }
+#v-dash .loading .box { text-align: center; color: var(--ink2); font-weight: 600; }
+#v-dash .spin { width: 34px; height: 34px; border: 3px solid #dbe3f3; border-top-color: var(--blue); border-radius: 50%; animation: v-dash-s .8s linear infinite; margin: 0 auto 12px; }
+@keyframes v-dash-s { to { transform: rotate(360deg); } }
+#v-dash .hidden { display: none !important; }
+@media (max-width: 1100px) {#v-dash .g-kpi { grid-template-columns: 1fr 1fr; }
+#v-dash .g-kpi .kpi.nps { grid-column: span 2; }
+#v-dash .g-32, #v-dash .g-2 { grid-template-columns: 1fr; }
+ }
+@media (max-width: 640px) {#v-dash main, #v-dash header.top { padding-left: 14px; padding-right: 14px; }
+#v-dash .g-kpi { grid-template-columns: 1fr; }
+#v-dash .g-kpi .kpi.nps { grid-column: auto; }
+#v-dash .fld { min-width: 46%; }
+ }
+@media print {#v-dash { background: #fff; }
+#v-dash header.top { padding-bottom: 18px; }
+#v-dash main { margin-top: 0; }
+#v-dash .filterbar { position: static; box-shadow: none; }
+#v-dash .top-actions, #v-dash .reset, #v-dash .toolbar { display: none; }
+#v-dash .tbl-wrap { max-height: none; overflow: visible; }
+#v-dash .card { break-inside: avoid; }
 
+    }
+
+  </style>
 <script>
-  const CTX = JSON.parse(<?= contexto ?>);
-  const $ = id => document.getElementById(id);
+(function () {
+  const ROOT = document.getElementById('v-dash');
+
+  const CTX = window.PAINEL.ctx;
+  const $ = id => document.getElementById('d-' + id);
   const COR = { prom: '#16a34a', neu: '#f59e0b', det: '#e5484d', blue: '#2563eb', grid: '#eef1f6', ink: '#334155', muted: '#64748b' };
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const URG = {
@@ -266,18 +264,21 @@
   let DB = null, charts = {}, qualiFiltro = { cl: '', busca: '' };
 
   // ---------- carga ----------
-  if (CTX.modo === 'dialog') {
-    $('btnImportar').removeAttribute('target');
-    $('btnImportar').href = '#';
-    $('btnImportar').addEventListener('click', e => { e.preventDefault(); google.script.run.mostrarInterfaceUpload(); });
-    $('btnResumo').addEventListener('click', () => google.script.run.mostrarEnvioResumo(JSON.stringify({ mesInicio: $('fDe').value, mesFim: $('fAte').value })));
-  } else if (CTX.urlApp) $('btnImportar').href = CTX.urlApp + '?p=importar';
-  else $('btnImportar').classList.add('hidden');
-  if (CTX.modo !== 'dialog') $('btnResumo').classList.add('hidden');
-  google.script.run
-    .withSuccessHandler(json => { DB = preparar(JSON.parse(json)); iniciarFiltros(); render(); $('loading').classList.add('hidden'); })
-    .withFailureHandler(err => { $('loading').innerHTML = `<div class="box">Não foi possível carregar os dados.<br><span class="muted">${esc(err.message)}</span></div>`; })
-    .getDadosDashboard();
+  $('btnImportar').removeAttribute('target');
+  $('btnImportar').href = '#';
+  $('btnImportar').addEventListener('click', e => { e.preventDefault(); PAINEL.ir('imp'); });
+  $('btnResumo').addEventListener('click', () => PAINEL.ir('env', { periodo: { mesInicio: $('fDe').value, mesFim: $('fAte').value } }));
+
+  function carregarDados() {
+    $('loading').classList.remove('hidden');
+    $('loading').innerHTML = '<div class="box"><div class="spin"></div>Carregando dados do NPS…</div>';
+    google.script.run
+      .withSuccessHandler(json => { DB = preparar(JSON.parse(json)); iniciarFiltros(); render(); $('loading').classList.add('hidden'); PAINEL.ultimaImportacao(DB.ultima); })
+      .withFailureHandler(err => { $('loading').innerHTML = `<div class="box">Não foi possível carregar os dados.<br><span class="muted">${esc(err.message)}</span></div>`; })
+      .getDadosDashboard();
+  }
+  PAINEL.modulos.dash = { recarregar: carregarDados, mostrar() { Object.values(charts).forEach(c => c.resize()); } };
+  carregarDados();
 
   function preparar(raw) {
     const linhas = raw.linhas.map(r => ({
@@ -311,6 +312,8 @@
     const rot = todos.map(m => [m, rotMes(m, true)]);
     opts($('fDe'), rot); opts($('fAte'), rot);
     padrao();
+    if (iniciarFiltros.ok) return;
+    iniciarFiltros.ok = true;
     ['fMod', 'fDe', 'fAte', 'fTipo', 'fPais'].forEach(id => $(id).addEventListener('change', () => {
       if ($('fDe').value > $('fAte').value) { if (id === 'fDe') $('fAte').value = $('fDe').value; else $('fDe').value = $('fAte').value; }
       render();
@@ -569,8 +572,8 @@
       }).join('') + '</tbody>';
   }
 
-  document.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', () => {
-    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === ch));
+  ROOT.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', () => {
+    ROOT.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === ch));
     qualiFiltro.cl = ch.dataset.cl; tabelaQuali();
   }));
   $('qBusca').addEventListener('input', e => { qualiFiltro.busca = e.target.value; tabelaQuali(); });
@@ -636,6 +639,6 @@
   function int(n) { return Number(n || 0).toLocaleString('pt-BR'); }
   function fmt1(n) { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
   function pct(n) { return (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%'; }
+
+})();
 </script>
-</body>
-</html>

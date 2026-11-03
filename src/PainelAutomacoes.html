@@ -1,0 +1,150 @@
+<!-- Módulo do Painel: automações (lembrete e envio automático) + histórico de envios -->
+<section class="view" id="v-auto">
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <small>NPS Produto · Protheus</small>
+        <h1>Automações</h1>
+        <p>O que roda sozinho todo mês. Fins de semana e feriados nacionais são pulados.</p>
+      </div>
+      <button class="btn btn-light" id="a-btnAtualizar">↻ Atualizar</button>
+    </div>
+
+    <div class="grid">
+      <div class="card auto" id="a-cardLembrete">
+        <div class="ic">⏰</div>
+        <div class="txt">
+          <b>Lembrete de importação</b>
+          <span>1º dia útil do mês, às 7h — e-mail para você com o período e os filtros do Fluig.</span>
+          <div class="prox" id="a-proxLembrete">–</div>
+        </div>
+        <div class="acts">
+          <button class="tog" id="a-togLembrete" title="Ativar/desativar"></button>
+          <button class="btn btn-light sm" id="a-btnTesteLembrete">Testar</button>
+        </div>
+      </div>
+      <div class="card auto" id="a-cardEnvio">
+        <div class="ic">✉️</div>
+        <div class="txt">
+          <b>Envio automático do resumo</b>
+          <span>2º dia útil do mês, às 8h — resumo de janeiro até o mês fechado para TLs e gestores. Uma vez por mês.</span>
+          <div class="prox" id="a-proxEnvio">–</div>
+        </div>
+        <div class="acts">
+          <button class="tog" id="a-togEnvio" title="Ativar/desativar"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g3">
+      <div class="card stat"><label>Destinatários ativos</label><div id="a-sDest">–</div><span id="a-sDestS"></span></div>
+      <div class="card stat"><label>Dados do mês fechado</label><div id="a-sMes">–</div><span id="a-sMesS"></span></div>
+      <div class="card stat"><label>Último envio automático</label><div id="a-sUlt">–</div><span id="a-sUltS"></span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Histórico de envios</h3><span class="muted" id="a-logCount"></span></div>
+      <div class="tbl"><table id="a-log"></table></div>
+    </div>
+
+    <div class="msg" id="a-msg"></div>
+  </div>
+</section>
+<style>
+#v-auto .wrap { padding: 18px 28px 28px; max-width: 1360px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+#v-auto .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+#v-auto .head small { text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: var(--muted); font-weight: 700; }
+#v-auto .head h1 { font-size: 20px; font-weight: 800; margin-top: 4px; }
+#v-auto .head p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+#v-auto .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+#v-auto .grid.g3 { grid-template-columns: repeat(3, 1fr); }
+#v-auto .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+#v-auto .auto { display: flex; gap: 14px; align-items: flex-start; }
+#v-auto .auto .ic { width: 42px; height: 42px; border-radius: 12px; background: var(--blue-soft); display: grid; place-items: center; font-size: 20px; flex: none; }
+#v-auto .auto .txt { flex: 1; min-width: 0; }
+#v-auto .auto b { display: block; font-size: 15px; }
+#v-auto .auto span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+#v-auto .prox { display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #f1f5f9; color: var(--muted); }
+#v-auto .prox.on { background: #e9f8ef; color: #067647; }
+#v-auto .acts { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+#v-auto .tog { position: relative; width: 46px; height: 26px; border-radius: 999px; background: #cbd5e1; border: none; cursor: pointer; transition: .15s; }
+#v-auto .tog::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: .15s; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+#v-auto .tog.on { background: var(--green); } #v-auto .tog.on::after { left: 23px; }
+#v-auto .tog:disabled { opacity: .5; cursor: wait; }
+#v-auto .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13px; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; font-family: inherit; white-space: nowrap; }
+#v-auto .btn:hover { border-color: #cbd5e1; background: #f8fafc; }
+#v-auto .btn.sm { padding: 6px 10px; font-size: 12px; }
+#v-auto .stat label { font-size: 12px; color: var(--muted); font-weight: 600; }
+#v-auto .stat div { font-size: 22px; font-weight: 800; margin-top: 6px; }
+#v-auto .stat span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+#v-auto .card-head { display: flex; justify-content: space-between; align-items: center; }
+#v-auto .card-head h3 { font-size: 14px; }
+#v-auto .muted { color: var(--muted); font-size: 12px; }
+#v-auto .tbl { max-height: 340px; overflow: auto; margin-top: 10px; border-radius: 10px; }
+#v-auto table { width: 100%; border-collapse: collapse; font-size: 13px; }
+#v-auto th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 9px 10px; background: #f6f8fc; border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+#v-auto td { padding: 9px 10px; border-bottom: 1px solid var(--line); color: var(--ink2); vertical-align: top; }
+#v-auto .pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+#v-auto .p-auto { background: #e9f8ef; color: #067647; } #v-auto .p-man { background: var(--blue-soft); color: #1e40af; } #v-auto .p-test { background: #f1f5f9; color: var(--muted); }
+#v-auto .msg { display: none; font-size: 13px; border-radius: 10px; padding: 10px 12px; }
+#v-auto .msg.ok { display: block; background: #ecfdf3; color: #16a34a; } #v-auto .msg.err { display: block; background: #fef2f2; color: #dc2626; }
+#v-auto .empty { text-align: center; color: var(--muted); padding: 24px; }
+@media (max-width: 900px) { #v-auto .grid, #v-auto .grid.g3 { grid-template-columns: 1fr; } }
+</style>
+<script>
+(function () {
+  const $ = id => document.getElementById('a-' + id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let S = null, ocupado = false;
+
+  function carregar() {
+    google.script.run.withSuccessHandler(j => { S = JSON.parse(j); render(); })
+      .withFailureHandler(e => msg('err', '❌ ' + esc(e.message))).getStatusAutomacoes();
+  }
+
+  function render() {
+    tog('togLembrete', S.lembrete.ativo); tog('togEnvio', S.envio.ativo);
+    prox('proxLembrete', S.lembrete); prox('proxEnvio', S.envio);
+    $('sDest').textContent = `${S.destinatarios.tls} TL${S.destinatarios.tls === 1 ? '' : 's'} · ${S.destinatarios.gestores} gestor${S.destinatarios.gestores === 1 ? '' : 'es'}`;
+    $('sDestS').innerHTML = S.destinatarios.tls + S.destinatarios.gestores ? 'cadastrados e ativos' : '<a href="#" id="a-lnkCad">cadastre times e gestores</a>';
+    const lc = $('lnkCad'); if (lc) lc.onclick = e => { e.preventDefault(); PAINEL.ir('cad'); };
+    $('sMes').textContent = S.temMesFim ? '✅ ' + S.mesFimNome : '⚠️ ' + S.mesFimNome;
+    $('sMesS').textContent = S.temMesFim ? 'pronto para o envio' : 'importe o relatório antes do envio';
+    $('sUlt').textContent = S.ultimoAuto || '—';
+    $('sUltS').textContent = S.ultimoAuto ? 'resumo enviado automaticamente' : 'nenhum envio automático ainda';
+    $('logCount').textContent = S.log.length ? `últimos ${S.log.length}` : '';
+    $('log').innerHTML = S.log.length
+      ? '<thead><tr><th>Data</th><th>Modo</th><th>Tipo</th><th>Destinatário</th><th>Período</th><th>NPS</th></tr></thead><tbody>' +
+        S.log.map(l => `<tr><td style="white-space:nowrap">${esc(l.quando)}</td>
+          <td><span class="pill ${/auto/i.test(l.modo) ? 'p-auto' : /teste/i.test(l.modo) ? 'p-test' : 'p-man'}">${esc(l.modo)}</span></td>
+          <td>${esc(l.tipo)}</td><td><b>${esc(l.nome)}</b><div class="muted">${esc(l.email)}</div></td>
+          <td style="white-space:nowrap">${esc(l.periodo)}</td><td><b>${esc(l.nps)}</b></td></tr>`).join('') + '</tbody>'
+      : '<tr><td class="empty">Nenhum envio registrado ainda.</td></tr>';
+  }
+
+  function tog(id, on) { $(id).classList.toggle('on', !!on); $(id).disabled = ocupado; }
+  function prox(id, a) { $(id).classList.toggle('on', a.ativo); $(id).textContent = a.ativo ? `Próximo: ${a.proximo}` : `Desativado · seria em ${a.proximo}`; }
+
+  function alternar(qual, el) {
+    if (ocupado) return;
+    ocupado = true; el.disabled = true;
+    const ligar = !el.classList.contains('on');
+    google.script.run.withSuccessHandler(j => {
+      ocupado = false; S = JSON.parse(j); render();
+      msg('ok', `✅ ${qual === 'lembrete' ? 'Lembrete de importação' : 'Envio automático'} ${ligar ? 'ativado' : 'desativado'}.`);
+    }).withFailureHandler(e => { ocupado = false; el.disabled = false; msg('err', '❌ ' + esc(e.message)); }).alternarAutomacao(qual, ligar);
+  }
+
+  $('togLembrete').onclick = e => alternar('lembrete', e.currentTarget);
+  $('togEnvio').onclick = e => alternar('envio', e.currentTarget);
+  $('btnAtualizar').onclick = carregar;
+  $('btnTesteLembrete').onclick = () => {
+    google.script.run.withSuccessHandler(email => msg('ok', `📧 Lembrete de teste enviado para ${esc(email)}.`))
+      .withFailureHandler(e => msg('err', '❌ ' + esc(e.message))).enviarLembreteTestePainel();
+  };
+
+  function msg(t, m) { const el = $('msg'); el.className = 'msg ' + t; el.innerHTML = m; }
+
+  PAINEL.modulos.auto = { mostrar() { if (!S) carregar(); }, invalidar() { S = null; } };
+})();
+</script>

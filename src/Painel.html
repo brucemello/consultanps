@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Central NPS · Protheus</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f172a; --ink2: #334155; --muted: #64748b; --line: #e5e9f2; --bg: #f3f5fa; --card: #fff;
+      --navy: #0b1f3a; --blue: #2563eb; --blue-soft: #eef3ff; --green: #16a34a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg); }
+    body { font-family: 'Inter', system-ui, sans-serif; color: var(--ink); font-size: 14px; }
+
+    /* ---------- barra superior ---------- */
+    .shell-top { background: var(--navy); color: #fff; padding: 0 28px; position: sticky; top: 0; z-index: 40; box-shadow: 0 1px 0 rgba(255,255,255,.06); }
+    .shell-in { max-width: 1360px; margin: 0 auto; display: flex; align-items: center; gap: 18px; height: 58px; }
+    .brand { display: flex; align-items: center; gap: 10px; flex: none; }
+    .brand .logo { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #3b82f6, #1e40af); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+    .brand b { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+    .brand small { display: block; font-size: 10.5px; color: #93b0e0; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+    nav.tabs { display: flex; gap: 4px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+    nav.tabs::-webkit-scrollbar { display: none; }
+    .nav-tab { background: none; border: none; color: #bcd0f0; font-family: inherit; font-size: 13.5px; font-weight: 600; padding: 8px 14px; border-radius: 9px; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 7px; }
+    .nav-tab:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .nav-tab.on { background: rgba(255,255,255,.14); color: #fff; }
+    .nav-tab .ic { font-size: 14px; }
+    .shell-meta { flex: none; display: flex; align-items: center; gap: 12px; font-size: 12px; color: #93b0e0; }
+    .shell-meta a { color: #fff; text-decoration: none; font-weight: 600; border: 1px solid rgba(255,255,255,.25); padding: 6px 10px; border-radius: 8px; }
+    .shell-meta a:hover { background: rgba(255,255,255,.1); }
+
+    /* ---------- abas ---------- */
+    .view { display: none; }
+    .view.on { display: block; animation: entrar .18s ease-out; }
+    @keyframes entrar { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    /* As telas de Importar / Envio / Cadastro tinham um banner escuro próprio;
+       dentro do painel ele vira um cabeçalho claro (a barra superior já é escura). */
+    #painel .view .wrap { max-width: 1360px; margin: 0 auto; padding: 18px 28px 28px; }
+    #painel .view .hero { background: #fff; color: var(--ink); border: 1px solid var(--line); box-shadow: 0 6px 20px -14px rgba(15,23,42,.25); }
+    #painel .view .hero small { color: var(--muted); }
+    #painel .view .hero p { color: var(--muted); }
+    #painel .view .hero .btn-ghost { background: #fff; color: var(--ink); border-color: var(--line); }
+    #painel .view .hero .btn-ghost:hover { border-color: #cbd5e1; background: #f8fafc; }
+    #painel .view .hero .per label { color: var(--muted); }
+    #painel .view .hero .per select { background: #f8fafc; color: var(--ink); border-color: var(--line); }
+    #painel #v-env .wrap { height: calc(100vh - 58px); }
+    #painel #v-dash header.top { padding-top: 22px; }
+    #painel #v-dash .filterbar { top: 66px; }
+
+    @media (max-width: 900px) {
+      .shell-top { padding: 0 12px; }
+      .brand small, .shell-meta span { display: none; }
+      .nav-tab .lbl { display: none; }
+      #painel .view .wrap { padding: 14px; }
+    }
+    @media print { .shell-top { display: none; } }
+  </style>
+  <script>
+    window.PAINEL = {
+      ctx: JSON.parse(<?= contexto ?>),
+      modulos: {},
+      atual: null,
+      ir(tab, opts) {
+        if (this.atual === 'cad' && tab !== 'cad' && this.modulos.cad && this.modulos.cad.temAlteracoes() &&
+            !confirm('Há alterações não salvas no cadastro. Sair mesmo assim?')) return;
+        document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + tab));
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+        this.atual = tab;
+        window.scrollTo(0, 0);
+        const m = this.modulos[tab];
+        if (m && m.mostrar) m.mostrar(opts);
+      },
+      ultimaImportacao(u) {
+        const el = document.getElementById('shell-ultima');
+        if (el) el.textContent = u && u.quando ? 'Última importação ' + new Date(u.quando).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Nenhuma importação registrada';
+      }
+    };
+  </script>
+</head>
+<body id="painel">
+  <header class="shell-top">
+    <div class="shell-in">
+      <div class="brand">
+        <div class="logo">N</div>
+        <div><b>Central NPS</b><small>Protheus · Insights CX</small></div>
+      </div>
+      <nav class="tabs">
+        <button class="nav-tab" data-tab="dash"><span class="ic">📊</span><span class="lbl">Dashboard</span></button>
+        <button class="nav-tab" data-tab="imp"><span class="ic">📥</span><span class="lbl">Importar</span></button>
+        <button class="nav-tab" data-tab="env"><span class="ic">✉️</span><span class="lbl">Envio de resumo</span></button>
+        <button class="nav-tab" data-tab="cad"><span class="ic">👥</span><span class="lbl">Times e gestores</span></button>
+        <button class="nav-tab" data-tab="auto"><span class="ic">⏰</span><span class="lbl">Automações</span></button>
+      </nav>
+      <div class="shell-meta">
+        <span id="shell-ultima"></span>
+        <a id="shell-fluig" target="_blank" rel="noopener">Fluig ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <?!= include('PainelDashboard') ?>
+  <?!= include('PainelImportar') ?>
+  <?!= include('PainelEnvio') ?>
+  <?!= include('PainelCadastro') ?>
+  <?!= include('PainelAutomacoes') ?>
+
+  <script>
+    document.getElementById('shell-fluig').href = PAINEL.ctx.urlFluig;
+    document.querySelectorAll('.nav-tab').forEach(b => b.addEventListener('click', () => PAINEL.ir(b.dataset.tab)));
+    const inicial = ['dash', 'imp', 'env', 'cad', 'auto'].includes(PAINEL.ctx.tabInicial) ? PAINEL.ctx.tabInicial : 'dash';
+    PAINEL.ir(inicial, PAINEL.ctx.periodoEscolhido ? { periodo: PAINEL.ctx.periodoEscolhido } : undefined);
+  </script>
+</body>
+</html>
