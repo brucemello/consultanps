@@ -1,4 +1,4 @@
-// Testes das funções puras de src/Código.js (rodam no Node, sem Apps Script).
+// Testes das funções puras de src/*.js (rodam no Node, sem Apps Script).
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -6,7 +6,8 @@ const assert = require('assert');
 
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'Código.js'), 'utf8'), ctx);
+const SRC = path.join(__dirname, '..', 'src');
+fs.readdirSync(SRC).filter(f => f.endsWith('.js')).sort().forEach(f => vm.runInContext(fs.readFileSync(path.join(SRC, f), 'utf8'), ctx, { filename: f }));
 // Objetos vindos do contexto vm são de outro "realm": normaliza via JSON (datas ficam como estão).
 const run = code => {
   const v = vm.runInContext(code, ctx);

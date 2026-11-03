@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink:#0f172a; --ink2:#334155; --muted:#64748b; --line:#e2e8f0; --bg:#f4f6fb; --card:#fff; --blue:#2563eb; --blue-soft:#eef3ff;
+            --green:#16a34a; --green-soft:#ecfdf3; --red:#dc2626; --red-soft:#fef2f2; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
+    .wrap { padding: 18px; }
+    .hero { background: linear-gradient(120deg,#0b1f3a 0%,#13325e 60%,#1d4ed8 140%); color:#fff; border-radius:16px; padding:18px 22px; display:flex; justify-content:space-between; align-items:center; gap:14px; }
+    .hero small { text-transform:uppercase; letter-spacing:.12em; font-size:11px; color:#9fb6dc; font-weight:600; }
+    .hero h1 { font-size:20px; font-weight:800; margin-top:4px; }
+    .hero p { color:#c6d4ee; font-size:13px; margin-top:4px; }
+    .btn { display:inline-flex; align-items:center; gap:6px; border-radius:10px; padding:9px 14px; font-weight:600; font-size:13px; border:1px solid transparent; cursor:pointer; font-family:inherit; white-space:nowrap; transition:.15s; }
+    .btn-primary { background:var(--blue); color:#fff; } .btn-primary:hover { background:#1d4ed8; } .btn-primary:disabled { background:#94a3b8; cursor:not-allowed; }
+    .btn-ghost { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.25); } .btn-ghost:hover { background:rgba(255,255,255,.2); }
+    .btn-light { background:#fff; color:var(--ink); border-color:var(--line); } .btn-light:hover { border-color:#cbd5e1; }
+
+    .tabs { display:flex; gap:6px; margin:16px 0 12px; }
+    .tab { background:#fff; border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-weight:600; font-size:13px; color:var(--ink2); cursor:pointer; font-family:inherit; }
+    .tab.on { background:#0b1f3a; color:#fff; border-color:#0b1f3a; }
+    .tab .count { display:inline-block; min-width:20px; padding:0 6px; border-radius:999px; background:#e2e8f0; color:var(--ink2); font-size:11px; margin-left:6px; }
+    .tab.on .count { background:rgba(255,255,255,.2); color:#fff; }
+
+    .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px; }
+    .hint { font-size:12.5px; color:var(--muted); margin:0 2px 10px; }
+    .list { display:flex; flex-direction:column; gap:8px; max-height:420px; overflow:auto; padding:2px; }
+    .row { display:grid; gap:8px; align-items:start; padding:10px; border:1px solid var(--line); border-radius:12px; background:#fbfcfe; }
+    .row.off { opacity:.55; }
+    .row-t { grid-template-columns: 1.1fr 1.3fr 1.1fr 1.6fr 74px 34px; }
+    .row-g { grid-template-columns: 1.1fr 1.5fr 2.6fr 74px 34px; }
+    .fld label { display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:4px; }
+    .fld input { width:100%; font-family:inherit; font-size:13.5px; border:1px solid var(--line); border-radius:9px; padding:8px 10px; background:#fff; color:var(--ink); }
+    .fld input:focus { outline:2px solid var(--blue-soft); border-color:var(--blue); }
+    .fld input.err { border-color:var(--red); background:var(--red-soft); }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .chip { border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 11px; font-size:12.5px; font-weight:600; color:var(--ink2); cursor:pointer; font-family:inherit; }
+    .chip.on { background:var(--blue-soft); color:#1e40af; border-color:#c7d7fe; }
+    .chip.all.on { background:#0b1f3a; color:#fff; border-color:#0b1f3a; }
+    .switch { display:flex; flex-direction:column; align-items:flex-start; }
+    .tog { position:relative; width:40px; height:22px; border-radius:999px; background:#cbd5e1; border:none; cursor:pointer; margin-top:6px; transition:.15s; }
+    .tog::after { content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.15s; }
+    .tog.on { background:var(--green); } .tog.on::after { left:21px; }
+    .del { width:34px; height:34px; margin-top:20px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--muted); cursor:pointer; font-size:16px; }
+    .del:hover { color:var(--red); border-color:#fecaca; background:var(--red-soft); }
+    .add { margin-top:10px; width:100%; justify-content:center; border-style:dashed; color:var(--blue); }
+    .empty { text-align:center; color:var(--muted); padding:26px; font-size:13px; }
+
+    .foot { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:14px; }
+    .msg { font-size:13px; border-radius:10px; padding:9px 12px; display:none; flex:1; }
+    .msg.ok { display:block; background:var(--green-soft); color:var(--green); } .msg.err { display:block; background:var(--red-soft); color:var(--red); }
+    .spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <small>NPS Produto · Protheus</small>
+      <h1>Times e gestores</h1>
+      <p>Quem recebe o resumo do NPS: o TL recebe o do seu time; o gestor, o consolidado dos times que acompanha.</p>
+    </div>
+    <button class="btn btn-ghost" id="btnEnvio">✉ Enviar resumo</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="times">Times <span class="count" id="cTimes">0</span></button>
+    <button class="tab" data-tab="gestores">Gestores <span class="count" id="cGest">0</span></button>
+  </div>
+
+  <div class="card" id="pTimes">
+    <p class="hint">Cada time pode ter mais de um módulo (separe por vírgula). Para mais de um e-mail, separe por vírgula também.</p>
+    <div class="list" id="listTimes"></div>
+    <button class="btn btn-light add" id="addTime">+ Adicionar time</button>
+  </div>
+
+  <div class="card hidden" id="pGest">
+    <p class="hint">Marque os times que cada gestor acompanha. “Todos” inclui também times cadastrados no futuro.</p>
+    <div class="list" id="listGest"></div>
+    <button class="btn btn-light add" id="addGest">+ Adicionar gestor</button>
+  </div>
+
+  <div class="foot">
+    <div class="msg" id="msg"></div>
+    <button class="btn btn-primary" id="btnSalvar" style="margin-left:auto">Salvar cadastro</button>
+  </div>
+</div>
+
+<datalist id="dlMods"></datalist>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const reEmail = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/;
+  let S = { times: [], gestores: [], modulos: [] }, sujo = false;
+
+  google.script.run.withSuccessHandler(j => {
+    S = JSON.parse(j);
+    if (!S.times.length) S.times.push({ time: '', modulos: [S.modulos[0] || 'SIGAFIS'], tl: '', email: '', ativo: true });
+    $('dlMods').innerHTML = S.modulos.map(m => `<option value="${esc(m)}">`).join('');
+    render();
+  }).withFailureHandler(e => msg('err', e.message)).getCadastro();
+
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+    $('pTimes').classList.toggle('hidden', t.dataset.tab !== 'times');
+    $('pGest').classList.toggle('hidden', t.dataset.tab !== 'gestores');
+    if (t.dataset.tab === 'gestores') renderGest();
+  }));
+  $('addTime').onclick = () => { S.times.push({ time: '', modulos: [], tl: '', email: '', ativo: true }); render(); focoUltimo('listTimes'); };
+  $('addGest').onclick = () => { S.gestores.push({ nome: '', email: '', times: [], ativo: true }); renderGest(); focoUltimo('listGest'); };
+  $('btnSalvar').onclick = salvar;
+  $('btnEnvio').onclick = () => {
+    if (sujo && !confirm('Há alterações não salvas. Abrir o envio mesmo assim?')) return;
+    google.script.run.mostrarEnvioResumo();
+  };
+
+  function focoUltimo(id) { const ins = $(id).querySelectorAll('.row:last-child input'); if (ins[0]) ins[0].focus(); }
+
+  function render() { renderTimes(); renderGest(); }
+
+  function renderTimes() {
+    $('cTimes').textContent = S.times.length;
+    if (!S.times.length) { $('listTimes').innerHTML = '<div class="empty">Nenhum time cadastrado.</div>'; return; }
+    $('listTimes').innerHTML = S.times.map((t, i) => `
+      <div class="row row-t ${t.ativo ? '' : 'off'}" data-i="${i}">
+        <div class="fld"><label>Time</label><input data-k="time" value="${esc(t.time)}" placeholder="Ex.: Fiscal"></div>
+        <div class="fld"><label>Módulos</label><input data-k="modulos" list="dlMods" value="${esc(t.modulos.join(', '))}" placeholder="SIGAFIS"></div>
+        <div class="fld"><label>TL</label><input data-k="tl" value="${esc(t.tl)}" placeholder="Nome do TL"></div>
+        <div class="fld"><label>E-mail do TL</label><input data-k="email" type="text" value="${esc(t.email)}" placeholder="nome@totvs.com.br"></div>
+        <div class="switch fld"><label>Ativo</label><button class="tog ${t.ativo ? 'on' : ''}" data-tog="1" title="Ativo"></button></div>
+        <button class="del" title="Remover">×</button>
+      </div>`).join('');
+    ligar('listTimes', S.times, i => { S.times.splice(i, 1); renderTimes(); renderGest(); });
+  }
+
+  function renderGest() {
+    $('cGest').textContent = S.gestores.length;
+    const nomes = S.times.map(t => t.time).filter(Boolean);
+    if (!S.gestores.length) { $('listGest').innerHTML = '<div class="empty">Nenhum gestor cadastrado.</div>'; return; }
+    $('listGest').innerHTML = S.gestores.map((g, i) => {
+      g.times = g.times.filter(x => nomes.some(n => n.toLowerCase() === x.toLowerCase()));
+      const todos = !g.times.length;
+      return `<div class="row row-g ${g.ativo ? '' : 'off'}" data-i="${i}">
+        <div class="fld"><label>Nome</label><input data-k="nome" value="${esc(g.nome)}" placeholder="Nome do gestor"></div>
+        <div class="fld"><label>E-mail</label><input data-k="email" value="${esc(g.email)}" placeholder="nome@totvs.com.br"></div>
+        <div class="fld"><label>Times acompanhados</label><div class="chips">
+          <button class="chip all ${todos ? 'on' : ''}" data-all="1">Todos</button>
+          ${nomes.map(n => `<button class="chip ${g.times.some(x => x.toLowerCase() === n.toLowerCase()) ? 'on' : ''}" data-time="${esc(n)}">${esc(n)}</button>`).join('')}
+        </div></div>
+        <div class="switch fld"><label>Ativo</label><button class="tog ${g.ativo ? 'on' : ''}" data-tog="1"></button></div>
+        <button class="del" title="Remover">×</button>
+      </div>`;
+    }).join('');
+    ligar('listGest', S.gestores, i => { S.gestores.splice(i, 1); renderGest(); });
+    $('listGest').querySelectorAll('.row').forEach(row => {
+      const g = S.gestores[+row.dataset.i];
+      row.querySelectorAll('.chip').forEach(ch => ch.onclick = () => {
+        sujo = true;
+        if (ch.dataset.all) g.times = [];
+        else {
+          const n = ch.dataset.time, k = g.times.findIndex(x => x.toLowerCase() === n.toLowerCase());
+          k >= 0 ? g.times.splice(k, 1) : g.times.push(n);
+          if (g.times.length === nomes.length) g.times = [];
+        }
+        renderGest();
+      });
+    });
+  }
+
+  function ligar(id, arr, remover) {
+    $(id).querySelectorAll('.row').forEach(row => {
+      const i = +row.dataset.i, o = arr[i];
+      row.querySelectorAll('input[data-k]').forEach(inp => inp.addEventListener('input', () => {
+        sujo = true;
+        const k = inp.dataset.k;
+        o[k] = k === 'modulos' ? inp.value.split(',').map(x => x.trim().toUpperCase()).filter(Boolean) : inp.value;
+        if (k === 'email') inp.classList.toggle('err', inp.value.trim() !== '' && inp.value.split(/[,;]/).map(x => x.trim()).filter(Boolean).some(e => !reEmail.test(e)));
+        if (k === 'time') { $('cTimes').textContent = S.times.length; }
+      }));
+      row.querySelector('[data-tog]').onclick = () => { sujo = true; o.ativo = !o.ativo; id === 'listTimes' ? renderTimes() : renderGest(); };
+      row.querySelector('.del').onclick = () => {
+        const nome = o.time || o.nome;
+        if (nome && !confirm(`Remover "${nome}"?`)) return;
+        sujo = true; remover(i);
+      };
+    });
+  }
+
+  function salvar() {
+    const btn = $('btnSalvar');
+    S.times.forEach(t => { t.time = t.time.trim(); t.tl = (t.tl || '').trim(); t.email = t.email.trim(); });
+    S.gestores.forEach(g => { g.nome = g.nome.trim(); g.email = g.email.trim(); });
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Salvando…';
+    google.script.run.withSuccessHandler(r => {
+      btn.disabled = false; btn.textContent = 'Salvar cadastro';
+      msg(r.success ? 'ok' : 'err', (r.success ? '✅ ' : '') + r.message);
+      if (r.success) sujo = false;
+    }).withFailureHandler(e => { btn.disabled = false; btn.textContent = 'Salvar cadastro'; msg('err', e.message); })
+      .salvarCadastro(JSON.stringify({ times: S.times, gestores: S.gestores }));
+  }
+
+  function msg(t, m) { const el = $('msg'); el.className = 'msg ' + t; el.innerHTML = m; }
+</script>
+</body>
+</html>

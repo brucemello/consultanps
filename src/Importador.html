@@ -282,8 +282,10 @@
         btn.innerHTML = 'Importar para a Base Histórica';
         if (res.success) {
           setStep(4);
-          $('alerts').innerHTML = `<div class="alert ok">✅ ${res.message}</div><div class="actions"><a class="btn btn-primary" id="btnVerDash" href="${CTX.modo === 'dialog' ? '#' : CTX.urlApp}" target="_blank">Abrir Dashboard</a></div>`;
+          $('alerts').innerHTML = `<div class="alert ok">✅ ${res.message}</div><div class="actions"><button class="btn btn-light" id="btnResumo">✉ Enviar resumo aos times</button><a class="btn btn-primary" id="btnVerDash" href="${CTX.modo === 'dialog' ? '#' : CTX.urlApp}" target="_blank">Abrir Dashboard</a></div>`;
           if (CTX.modo === 'dialog') { const b = $('btnVerDash'); b.removeAttribute('target'); b.addEventListener('click', abrirDash); }
+          const br = $('btnResumo');
+          if (CTX.modo === 'dialog') br.addEventListener('click', () => google.script.run.mostrarEnvioResumo()); else br.classList.add('hidden');
           btn.classList.add('hidden');
         } else {
           mostrarErro(res.message); btn.disabled = false;

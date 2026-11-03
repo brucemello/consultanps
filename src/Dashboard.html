@@ -121,6 +121,7 @@
     </div>
     <div class="top-actions">
       <a class="btn" id="btnImportar" target="_blank">↥ Importar relatório</a>
+      <button class="btn" id="btnResumo">✉ Enviar resumo</button>
       <button class="btn" onclick="window.print()">⎙ Exportar PDF</button>
     </div>
   </div>
@@ -269,8 +270,10 @@
     $('btnImportar').removeAttribute('target');
     $('btnImportar').href = '#';
     $('btnImportar').addEventListener('click', e => { e.preventDefault(); google.script.run.mostrarInterfaceUpload(); });
+    $('btnResumo').addEventListener('click', () => google.script.run.mostrarEnvioResumo());
   } else if (CTX.urlApp) $('btnImportar').href = CTX.urlApp + '?p=importar';
   else $('btnImportar').classList.add('hidden');
+  if (CTX.modo !== 'dialog') $('btnResumo').classList.add('hidden');
   google.script.run
     .withSuccessHandler(json => { DB = preparar(JSON.parse(json)); iniciarFiltros(); render(); $('loading').classList.add('hidden'); })
     .withFailureHandler(err => { $('loading').innerHTML = `<div class="box">Não foi possível carregar os dados.<br><span class="muted">${esc(err.message)}</span></div>`; })
