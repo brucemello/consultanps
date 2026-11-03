@@ -464,7 +464,7 @@ function prepararEnvios_(sel) {
   const valores = base && base.getLastRow() > 1 ? base.getRange(2, 1, base.getLastRow() - 1, CABECALHOS_BASE.length).getValues() : [];
   const regs = registrosDeBase_(valores, FILTROS_PADRAO);
   const periodo = periodoDeMeses_(sel);
-  const envios = montarEnvios_(lerCadastro_(), regs, periodo, { planilha: ss.getUrl() });
+  const envios = montarEnvios_(lerCadastro_(), regs, periodo, { planilha: URL_PAINEL });
   const meses = [...new Set(regs.map(r => r.mes))].sort();
   return { periodo: periodo, envios: envios, meses: meses, temDados: regs.length > 0, temMesFim: regs.some(r => r.mes === periodo.mesFim) };
 }
