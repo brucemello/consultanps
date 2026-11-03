@@ -4,6 +4,8 @@
  */
 
 const URL_FLUIG = 'https://fluig.totvs.com/portal/p/10097/portal-de-insights-cx-v2';
+// Link fixo da Central NPS (Web App). É a implantação atualizada pelo deploy automático (secret DEPLOYMENT_ID).
+const URL_PAINEL = 'https://script.google.com/a/macros/totvs.com.br/s/AKfycbyCUu4TFMso0d8E5VonjbOB929O0wv_MXuOhB_sXx3-f-M1-cz66at9ujLDhe7_eU-vAA/exec';
 const URL_MANUAL = 'https://drive.google.com/file/d/1VD3aj2c-KN16bDuOecflMKa4YngtKRNM/view?usp=drive_link';
 
 // Filtros padrão aplicados no Portal de Insights CX (Fluig)
@@ -72,6 +74,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('🚀 NPS Protheus')
     .addItem('🧭 Abrir Central NPS', 'abrirPainel')
+    .addItem('🔗 Abrir Central no navegador', 'abrirPainelNavegador')
     .addSeparator()
     .addItem('📊 Dashboard', 'abrirDashboard')
     .addItem('📥 Importar relatório do Fluig', 'mostrarInterfaceUpload')
@@ -100,8 +103,7 @@ function include(nome) {
 }
 
 function contextoPaginas_(modo, tab, periodoEscolhido) {
-  let urlApp = '';
-  try { urlApp = ScriptApp.getService().getUrl() || ''; } catch (e) { urlApp = ''; }
+  const urlApp = URL_PAINEL;
   return JSON.stringify({
     modo: modo || 'dialog',
     tabInicial: tab || 'dash',
@@ -134,6 +136,10 @@ function mostrarCadastro() { abrirPainel('cad'); }
 function abrirAutomacoes() { abrirPainel('auto'); }
 function mostrarEnvioResumo(periodoJson) {
   abrirPainel('env', periodoJson ? periodoDeMeses_(JSON.parse(periodoJson)) : null);
+}
+
+function abrirPainelNavegador() {
+  abrirUrl_(URL_PAINEL, 'Abrindo a Central NPS...');
 }
 
 function abrirFluig() {
@@ -850,9 +856,8 @@ function enviarLembrete_(teste) {
   const pendente = !ultimoMes || ultimoMes < periodo.mesFim;
   const nomeMes = m => { const [y, mm] = m.split('-'); return ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+mm - 1] + '/' + y; };
 
-  let urlApp = '';
-  try { urlApp = ScriptApp.getService().getUrl() || ''; } catch (e) { urlApp = ''; }
-  const linkImportar = urlApp ? urlApp + '?p=importar' : ss.getUrl();
+  const urlApp = URL_PAINEL;
+  const linkImportar = URL_PAINEL + '?tab=imp';
   const F = FILTROS_PADRAO;
   const linha = (k, v) => `<tr><td style="padding:6px 12px;color:#64748b;font-size:13px">${k}</td><td style="padding:6px 12px;font-weight:600;font-size:13px">${v}</td></tr>`;
   const botao = (url, txt, cor) => `<a href="${url}" style="display:inline-block;background:${cor};color:#fff;text-decoration:none;font-weight:600;padding:10px 16px;border-radius:8px;margin-right:8px;font-size:14px">${txt}</a>`;
@@ -873,7 +878,7 @@ function enviarLembrete_(teste) {
         ${linha('Produto', F.produto)}${linha('Linha de Produto', F.linha)}${linha('Versão', F.versao)}${linha('Cliente', F.cliente)}
       </table>
       ${botao(URL_FLUIG, '1. Abrir o Fluig', '#13325e')}${botao(linkImportar, '2. Importar arquivo', '#2563eb')}
-      ${urlApp ? `<p style="font-size:13px;margin:16px 0 0"><a href="${urlApp}" style="color:#2563eb">Abrir o Dashboard Executivo</a></p>` : ''}
+      ${urlApp ? `<p style="font-size:13px;margin:16px 0 0"><a href="${urlApp}" style="color:#2563eb">Abrir a Central NPS</a></p>` : ''}
     </div>
   </div>`;
 

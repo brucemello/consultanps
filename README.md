@@ -15,7 +15,7 @@ Código do Google Apps Script com deploy automático via GitHub Actions.
 
 ## Central NPS (uma tela, com abas)
 
-Abra pelo menu **🚀 NPS Protheus → 🧭 Abrir Central NPS** (ou pela URL do Web App, com `?tab=dash|imp|env|cad|auto`).
+Abra pelo menu **🚀 NPS Protheus → 🧭 Abrir Central NPS** ou direto no navegador: <https://script.google.com/a/macros/totvs.com.br/s/AKfycbyCUu4TFMso0d8E5VonjbOB929O0wv_MXuOhB_sXx3-f-M1-cz66at9ujLDhe7_eU-vAA/exec> (aba inicial com `?tab=dash|imp|env|cad|auto`).
 
 | Aba | Arquivo | O que faz |
 |---|---|---|

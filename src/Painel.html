@@ -100,6 +100,7 @@
       </nav>
       <div class="shell-meta">
         <span id="shell-ultima"></span>
+        <a id="shell-nova" target="_blank" rel="noopener" title="Abrir a Central numa aba do navegador">Abrir no navegador ↗</a>
         <a id="shell-fluig" target="_blank" rel="noopener">Fluig ↗</a>
       </div>
     </div>
@@ -113,6 +114,8 @@
 
   <script>
     document.getElementById('shell-fluig').href = PAINEL.ctx.urlFluig;
+    const nova = document.getElementById('shell-nova');
+    if (PAINEL.ctx.modo === 'dialog' && PAINEL.ctx.urlApp) nova.href = PAINEL.ctx.urlApp; else nova.remove();
     document.querySelectorAll('.nav-tab').forEach(b => b.addEventListener('click', () => PAINEL.ir(b.dataset.tab)));
     const inicial = ['dash', 'imp', 'env', 'cad', 'auto'].includes(PAINEL.ctx.tabInicial) ? PAINEL.ctx.tabInicial : 'dash';
     PAINEL.ir(inicial, PAINEL.ctx.periodoEscolhido ? { periodo: PAINEL.ctx.periodoEscolhido } : undefined);
