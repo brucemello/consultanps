@@ -75,7 +75,7 @@ t('envios: um por TL ativo e um por gestor, com times corretos', () => {
   assert.deepStrictEqual(envios.map(e => e.tipo + ':' + e.nome), ['TL:João Silva', 'TL:Maria', 'Gestor:Ana Gestora', 'Gestor:Beto']);
   assert.strictEqual(envios[2].time, 'Fiscal, Compras');
   assert.strictEqual(envios[3].time, 'Compras');
-  assert.ok(/NPS Fiscal · outubro\/2026: 33,3 \(▲ 33,3\)/.test(envios[0].assunto), envios[0].assunto);
+  assert.ok(/^NPS Fiscal · jan a out\/2026: 16,7 · out\/26 33,3 \(▲ 33,3\)$/.test(envios[0].assunto), envios[0].assunto);
   assert.ok(envios[0].html.includes('Olá, João!'));
   assert.ok(envios[0].html.includes('Falta suporte'));
   assert.ok(envios[2].html.includes('Ranking dos times'));
@@ -93,6 +93,17 @@ t('2º dia útil do mês', () => {
   assert.strictEqual(f('2026, 11'), '2026-12-02');
   assert.strictEqual(f('2027, 0'), '2027-01-05');
   assert.strictEqual(f('2026, 4'), '2026-05-05');  // 01/05 feriado (sex) → 04 seg, 05 ter
+});
+
+t('período escolhido na tela (jul a out)', () => {
+  const p = run(`periodoDeMeses_({ mesInicio: '2026-07', mesFim: '2026-10' })`);
+  assert.deepStrictEqual([p.inicio, p.fim, p.mesInicio, p.mesFim], ['01/07/2026', '31/10/2026', '2026-07', '2026-10']);
+  assert.strictEqual(run(`rotuloPeriodo_(periodoDeMeses_({ mesInicio: '2026-07', mesFim: '2026-10' }))`), 'jul a out/2026');
+  assert.strictEqual(run(`rotuloPeriodo_(periodoDeMeses_({ mesInicio: '2025-11', mesFim: '2026-02' }))`), 'nov/2025 a fev/2026');
+  assert.strictEqual(run(`rotuloPeriodo_(periodoDeMeses_({ mesInicio: '2026-10', mesFim: '2026-10' }))`), 'outubro/2026');
+  assert.strictEqual(run(`periodoDeMeses_({ mesInicio: '2026-10', mesFim: '2026-07' }).mesInicio`), '2026-07'); // invertido
+  const r = run(`resumoModulos_(REGS, ['SIGAFIS'], '2026-10', '2026-10')`);
+  assert.strictEqual(r.total.base, 3); // só outubro
 });
 
 console.log(`cadastro.test.js: ${ok} testes ok`);

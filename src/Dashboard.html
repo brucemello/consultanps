@@ -270,7 +270,7 @@
     $('btnImportar').removeAttribute('target');
     $('btnImportar').href = '#';
     $('btnImportar').addEventListener('click', e => { e.preventDefault(); google.script.run.mostrarInterfaceUpload(); });
-    $('btnResumo').addEventListener('click', () => google.script.run.mostrarEnvioResumo());
+    $('btnResumo').addEventListener('click', () => google.script.run.mostrarEnvioResumo(JSON.stringify({ mesInicio: $('fDe').value, mesFim: $('fAte').value })));
   } else if (CTX.urlApp) $('btnImportar').href = CTX.urlApp + '?p=importar';
   else $('btnImportar').classList.add('hidden');
   if (CTX.modo !== 'dialog') $('btnResumo').classList.add('hidden');

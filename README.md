@@ -21,7 +21,7 @@ Código do Google Apps Script com deploy automático via GitHub Actions.
 | **Dashboard Executivo** (`src/Dashboard.html`) | Menu → *Abrir Dashboard Executivo* (abre em tela grande dentro da planilha), ou URL do Web App | KPIs, NPS por mês, P/N/D, distribuição de notas, causas raiz, achados, termos mais citados, comentários e plano de ação, com filtros de módulo, período, tipo e país |
 
 | **Cadastro de times e gestores** (`src/Cadastro.html`) | Menu → *Cadastro de times e gestores* | Times (módulos, TL e e-mail do TL) e gestores (times que acompanham). Grava nas abas `Cadastro_Times` e `Cadastro_Gestores` |
-| **Envio do resumo** (`src/EnvioResumo.html`) | Menu → *Enviar resumo do NPS por e-mail*, ou botão após importar | Prévia de cada e-mail, envio de teste para você e envio real. Cada envio fica registrado em `Log_Envios` |
+| **Envio do resumo** (`src/EnvioResumo.html`) | Menu → *Enviar resumo do NPS por e-mail*, botão do dashboard (leva o período do filtro) ou botão após importar | Escolha do período (De/Até), prévia de cada e-mail, envio de teste para você e envio real. Cada envio fica registrado em `Log_Envios` |
 
 ### E-mails
 

@@ -26,9 +26,12 @@ function mostrarCadastro() {
   SpreadsheetApp.getUi().showModalDialog(t.evaluate().setWidth(1040).setHeight(720), ' ');
 }
 
-function mostrarEnvioResumo() {
+/** periodoJson (opcional): {"mesInicio":"2026-07","mesFim":"2026-10"} — vem do filtro do dashboard. */
+function mostrarEnvioResumo(periodoJson) {
   const t = HtmlService.createTemplateFromFile('EnvioResumo');
-  t.contexto = contextoPaginas_('dialog');
+  const ctx = JSON.parse(contextoPaginas_('dialog'));
+  ctx.periodoEscolhido = periodoJson ? periodoDeMeses_(JSON.parse(periodoJson)) : null;
+  t.contexto = JSON.stringify(ctx);
   SpreadsheetApp.getUi().showModalDialog(t.evaluate().setWidth(1100).setHeight(760), ' ');
 }
 
@@ -157,6 +160,24 @@ function registrosDeBase_(valores, filtros) {
   return out;
 }
 
+/** Monta o objeto de período a partir de {mesInicio, mesFim} (yyyy-MM). Sem argumento: padrão (jan até o mês anterior). */
+function periodoDeMeses_(sel) {
+  if (!sel || !/^\d{4}-\d{2}$/.test(sel.mesInicio || '') || !/^\d{4}-\d{2}$/.test(sel.mesFim || '')) return periodoPadrao_(new Date());
+  let a = sel.mesInicio, b = sel.mesFim;
+  if (a > b) { const x = a; a = b; b = x; }
+  const [ya, ma] = a.split('-').map(Number), [yb, mb] = b.split('-').map(Number);
+  const fim = new Date(yb, mb, 0);
+  return { inicio: `01/${String(ma).padStart(2, '0')}/${ya}`, fim: `${String(fim.getDate()).padStart(2, '0')}/${String(mb).padStart(2, '0')}/${yb}`, mesInicio: a, mesFim: b };
+}
+
+/** "jul a out/2026", "nov/2025 a fev/2026" ou "outubro/2026" (um mês só). */
+function rotuloPeriodo_(periodo) {
+  const [ya, ma] = periodo.mesInicio.split('-'), [yb, mb] = periodo.mesFim.split('-');
+  if (periodo.mesInicio === periodo.mesFim) return nomeMes_(periodo.mesFim);
+  if (ya === yb) return `${MESES_CURTOS[+ma - 1]} a ${MESES_CURTOS[+mb - 1]}/${yb}`;
+  return `${MESES_CURTOS[+ma - 1]}/${ya} a ${MESES_CURTOS[+mb - 1]}/${yb}`;
+}
+
 function mesAnterior_(m) {
   let [y, mm] = m.split('-').map(Number);
   mm--; if (mm === 0) { mm = 12; y--; }
@@ -238,7 +259,7 @@ function montarEnvios_(cadastro, regs, periodo, links) {
     const r = resumos[t.time];
     envios.push({
       tipo: 'TL', nome: t.tl || t.time, time: t.time, para: validarEmails_(t.email).lista.join(','),
-      assunto: `NPS ${t.time} · ${nomeMes_(periodo.mesFim)}: ${fmtNps_(r.ultimo.nps)}${setaVar_(r.variacao)}`,
+      assunto: `NPS ${t.time} · ${rotuloPeriodo_(periodo)}: ${fmtNps_(r.total.nps)} · ${mesCurto_(periodo.mesFim)} ${fmtNps_(r.ultimo.nps)}${setaVar_(r.variacao)}`,
       nps: r.total.nps, npsMes: r.ultimo.nps, html: htmlEmailTime_(t, r, periodo, links)
     });
   });
@@ -251,7 +272,7 @@ function montarEnvios_(cadastro, regs, periodo, links) {
     const consolidado = resumoModulos_(regs, modulos, periodo.mesInicio, periodo.mesFim);
     envios.push({
       tipo: 'Gestor', nome: g.nome, time: seus.map(t => t.time).join(', '), para: validarEmails_(g.email).lista.join(','),
-      assunto: `Resumo NPS · ${nomeMes_(periodo.mesFim)} · ${seus.length} time${seus.length > 1 ? 's' : ''} · NPS ${fmtNps_(consolidado.ultimo.nps)}`,
+      assunto: `Resumo NPS · ${rotuloPeriodo_(periodo)} · ${seus.length} time${seus.length > 1 ? 's' : ''} · NPS ${fmtNps_(consolidado.total.nps)}`,
       nps: consolidado.total.nps, npsMes: consolidado.ultimo.nps, html: htmlEmailGestor_(g, seus.map(t => ({ t: t, r: resumos[t.time] })), consolidado, periodo, links)
     });
   });
@@ -381,7 +402,7 @@ function destaqueNps_(r, periodo) {
       <div style="font-size:12px;color:${EM.muted};margin-top:8px">${fmtInt_(r.ultimo.base)} respostas com nota · ${zu.nome.toLowerCase()}</div>
     </td></tr></table></td>
     <td width="50%" valign="top" style="padding-left:8px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${EM.line};border-radius:12px"><tr><td style="${EM.font};padding:16px 18px">
-      <div style="font-size:12px;color:${EM.ink2};font-weight:600">Acumulado ${mesCurto_(periodo.mesInicio)} – ${mesCurto_(periodo.mesFim)}</div>
+      <div style="font-size:12px;color:${EM.ink2};font-weight:600">Período ${mesCurto_(periodo.mesInicio)} – ${mesCurto_(periodo.mesFim)}</div>
       <div style="font-size:40px;line-height:1.1;font-weight:800;color:${zt.cor};margin:6px 0 8px">${fmtNps_(r.total.nps)}</div>
       <div style="font-size:12px;color:${EM.muted}">${fmtInt_(r.total.resp)} respostas de ${fmtInt_(r.total.abord)} abordagens<br>aderência ${fmtPct_(r.total.ader)} · ${fmtInt_(r.total.com)} comentários</div>
     </td></tr></table></td>
@@ -401,7 +422,7 @@ function destaquesTexto_(r) {
 
 function htmlEmailTime_(t, r, periodo, links) {
   const ola = t.tl ? `Olá, ${escHtml_(t.tl.split(' ')[0])}! ` : '';
-  let corpo = `<tr><td style="padding:0 24px 16px;${EM.font};font-size:14px;color:${EM.ink2};line-height:1.55">${ola}Segue o resumo do NPS do time <b>${escHtml_(t.time)}</b> (${escHtml_(t.modulos.join(', '))}), com dados até ${nomeMes_(periodo.mesFim)}.</td></tr>`;
+  let corpo = `<tr><td style="padding:0 24px 16px;${EM.font};font-size:14px;color:${EM.ink2};line-height:1.55">${ola}Segue o resumo do NPS do time <b>${escHtml_(t.time)}</b> (${escHtml_(t.modulos.join(', '))}) no período de <b>${rotuloPeriodo_(periodo)}</b>.</td></tr>`;
   corpo += destaqueNps_(r, periodo);
   corpo += cartao_('Composição das respostas no período', barraMix_(r.total) || `<span style="${EM.font};font-size:13px;color:${EM.muted}">Sem respostas no período.</span>`);
   const sp = sparkMeses_(r.serie), dt = destaquesTexto_(r);
@@ -409,12 +430,12 @@ function htmlEmailTime_(t, r, periodo, links) {
   corpo += cartao_('Causas raiz nos comentários', tabelaCausas_(r.causas, 4));
   if (r.detratores.length) corpo += cartao_('Voz do cliente · detratores', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${r.detratores.slice(0, 3).map(x => citacao_(x, EM.det)).join('')}</table>`);
   if (r.elogio) corpo += cartao_('Voz do cliente · elogio', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${citacao_(r.elogio, EM.prom)}</table>`);
-  return moldura_('NPS Produto · Protheus', `NPS do time ${escHtml_(t.time)}`, `${escHtml_(t.modulos.join(', '))} · ${nomeMes_(periodo.mesFim)}`, corpo, links);
+  return moldura_('NPS Produto · Protheus', `NPS do time ${escHtml_(t.time)}`, `${escHtml_(t.modulos.join(', '))} · ${rotuloPeriodo_(periodo)}`, corpo, links);
 }
 
 function htmlEmailGestor_(g, itens, consolidado, periodo, links) {
   const ola = `Olá, ${escHtml_(g.nome.split(' ')[0])}! `;
-  let corpo = `<tr><td style="padding:0 24px 16px;${EM.font};font-size:14px;color:${EM.ink2};line-height:1.55">${ola}Segue o consolidado do NPS de <b>${itens.length} time${itens.length > 1 ? 's' : ''}</b>, com dados até ${nomeMes_(periodo.mesFim)}.</td></tr>`;
+  let corpo = `<tr><td style="padding:0 24px 16px;${EM.font};font-size:14px;color:${EM.ink2};line-height:1.55">${ola}Segue o consolidado do NPS de <b>${itens.length} time${itens.length > 1 ? 's' : ''}</b> no período de <b>${rotuloPeriodo_(periodo)}</b>.</td></tr>`;
   corpo += destaqueNps_(consolidado, periodo);
 
   const ord = itens.slice().sort((a, b) => (b.r.ultimo.nps == null ? -999 : b.r.ultimo.nps) - (a.r.ultimo.nps == null ? -999 : a.r.ultimo.nps));
@@ -430,7 +451,7 @@ function htmlEmailGestor_(g, itens, consolidado, periodo, links) {
       <td align="center" style="${EM.font};font-size:13px;color:${EM.det};font-weight:600;padding:10px 6px;border-bottom:1px solid ${EM.line}">${fmtInt_(r.total.D)}</td></tr>`;
   }).join('');
   corpo += cartao_('Ranking dos times', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>
-    ${th('Time')}${th(mesCurto_(periodo.mesFim), 'center')}${th('Var.', 'center')}${th('Acumulado', 'center')}${th('Respostas', 'center')}${th('Detratores', 'center')}</tr>${linhas}</table>`);
+    ${th('Time')}${th(mesCurto_(periodo.mesFim), 'center')}${th('Var.', 'center')}${th('Período', 'center')}${th('Respostas', 'center')}${th('Detratores', 'center')}</tr>${linhas}</table>`);
 
   const atencao = ord.filter(x => (x.r.variacao != null && x.r.variacao <= -10) || (x.r.ultimo.nps != null && x.r.ultimo.nps < 0));
   const alertas = atencao.map(({ t, r }) => {
@@ -443,28 +464,29 @@ function htmlEmailGestor_(g, itens, consolidado, periodo, links) {
   corpo += cartao_('Composição das respostas · consolidado', barraMix_(consolidado.total) || '');
   corpo += cartao_('Causas raiz · consolidado', tabelaCausas_(consolidado.causas, 5));
   if (consolidado.detratores.length) corpo += cartao_('Voz do cliente · detratores', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${consolidado.detratores.slice(0, 2).map(x => citacao_(x, EM.det)).join('')}</table>`);
-  return moldura_('NPS Produto · Protheus · Gestão', 'Resumo executivo de NPS', `${itens.length} time${itens.length > 1 ? 's' : ''} · ${nomeMes_(periodo.mesFim)}`, corpo, links);
+  return moldura_('NPS Produto · Protheus · Gestão', 'Resumo executivo de NPS', `${itens.length} time${itens.length > 1 ? 's' : ''} · ${rotuloPeriodo_(periodo)}`, corpo, links);
 }
 
 // ============================================================
 // ENVIO
 // ============================================================
 
-function prepararEnvios_() {
+function prepararEnvios_(sel) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const base = ss.getSheetByName('Base_Historica');
   const valores = base && base.getLastRow() > 1 ? base.getRange(2, 1, base.getLastRow() - 1, CABECALHOS_BASE.length).getValues() : [];
   const regs = registrosDeBase_(valores, FILTROS_PADRAO);
-  const periodo = periodoPadrao_(new Date());
+  const periodo = periodoDeMeses_(sel);
   const envios = montarEnvios_(lerCadastro_(), regs, periodo, { planilha: ss.getUrl() });
-  return { periodo: periodo, envios: envios, temDados: regs.length > 0, temMesFim: regs.some(r => r.mes === periodo.mesFim) };
+  const meses = [...new Set(regs.map(r => r.mes))].sort();
+  return { periodo: periodo, envios: envios, meses: meses, temDados: regs.length > 0, temMesFim: regs.some(r => r.mes === periodo.mesFim) };
 }
 
 /** Prévia para a tela de envio. */
-function previewResumo() {
-  const p = prepararEnvios_();
+function previewResumo(periodoJson) {
+  const p = prepararEnvios_(periodoJson ? JSON.parse(periodoJson) : null);
   return JSON.stringify({
-    periodo: p.periodo, temDados: p.temDados, meuEmail: Session.getEffectiveUser().getEmail(),
+    periodo: p.periodo, rotulo: rotuloPeriodo_(p.periodo), meses: p.meses, temDados: p.temDados, temMesFim: p.temMesFim, meuEmail: Session.getEffectiveUser().getEmail(),
     envios: p.envios.map(e => ({ tipo: e.tipo, nome: e.nome, time: e.time, para: e.para, assunto: e.assunto, nps: e.nps, npsMes: e.npsMes, html: e.html }))
   });
 }
@@ -473,8 +495,8 @@ function previewResumo() {
  * modo = 'teste' → envia todos os e-mails só para você (assunto com [TESTE])
  * modo = 'real'  → envia para cada TL e gestor cadastrado
  */
-function enviarResumo(modo, rotulo) {
-  const p = prepararEnvios_();
+function enviarResumo(modo, rotulo, periodoJson) {
+  const p = prepararEnvios_(periodoJson ? JSON.parse(periodoJson) : null);
   if (!p.envios.length) return { success: false, message: 'Nenhum destinatário ativo no cadastro.' };
   const eu = Session.getEffectiveUser().getEmail();
   const teste = modo !== 'real';

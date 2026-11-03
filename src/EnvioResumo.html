@@ -40,6 +40,10 @@
     .msg { flex:1; font-size:13px; border-radius:10px; padding:9px 12px; }
     .msg.ok { background:var(--green-soft); color:var(--green); } .msg.err { background:var(--red-soft); color:var(--red); }
     .msg.warn { background:var(--amber-soft); color:var(--amber); } .msg.info { background:#fff; color:var(--muted); border:1px solid var(--line); }
+    .per { display:flex; gap:8px; align-items:flex-end; }
+    .per label { display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:#9fb6dc; font-weight:700; margin-bottom:4px; }
+    .per select { font-family:inherit; font-size:13px; font-weight:600; border-radius:9px; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.1); color:#fff; padding:8px 10px; cursor:pointer; }
+    .per select option { color:#0f172a; }
     .empty { padding:30px; text-align:center; color:var(--muted); }
     .loading { display:grid; place-items:center; flex:1; color:var(--ink2); font-weight:600; }
     .spin { width:30px; height:30px; border:3px solid #dbe3f3; border-top-color:var(--blue); border-radius:50%; animation:s .8s linear infinite; margin:0 auto 10px; }
@@ -54,7 +58,11 @@
       <h1>Enviar resumo do NPS</h1>
       <p id="sub">Carregando…</p>
     </div>
-    <button class="btn btn-ghost" id="btnCad">👥 Editar cadastro</button>
+    <div class="per">
+      <div><label>De</label><select id="pDe"></select></div>
+      <div><label>Até</label><select id="pAte"></select></div>
+      <button class="btn btn-ghost" id="btnCad">👥 Editar cadastro</button>
+    </div>
   </div>
 
   <div class="main" id="main">
@@ -72,19 +80,40 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  let D = null, sel = 0;
+  const CTX = JSON.parse(<?= contexto ?>);
+  let D = null, sel = 0, PER = CTX.periodoEscolhido ? { mesInicio: CTX.periodoEscolhido.mesInicio, mesFim: CTX.periodoEscolhido.mesFim } : null;
+  const perJson = () => PER ? JSON.stringify(PER) : null;
 
   $('btnCad').onclick = () => google.script.run.mostrarCadastro();
   $('btnTeste').onclick = () => enviar('teste');
   $('btnEnviar').onclick = () => {
     const n = D.envios.length, tl = D.envios.filter(e => e.tipo === 'TL').length;
-    if (!confirm(`Enviar ${n} e-mail(s) agora?\n\n• ${tl} para TLs\n• ${n - tl} para gestores`)) return;
+    if (!confirm(`Enviar ${n} e-mail(s) agora com o período ${D.rotulo}?\n\n• ${tl} para TLs\n• ${n - tl} para gestores`)) return;
     enviar('real');
   };
 
-  google.script.run.withSuccessHandler(j => { D = JSON.parse(j); render(); })
-    .withFailureHandler(e => { $('main').innerHTML = `<div class="empty">Erro ao montar os e-mails: ${esc(e.message)}</div>`; })
-    .previewResumo();
+  ['pDe', 'pAte'].forEach(id => $(id).addEventListener('change', () => {
+    if ($('pDe').value > $('pAte').value) { if (id === 'pDe') $('pAte').value = $('pDe').value; else $('pDe').value = $('pAte').value; }
+    PER = { mesInicio: $('pDe').value, mesFim: $('pAte').value }; carregar();
+  }));
+  carregar();
+
+  function carregar() {
+    $('btnTeste').disabled = $('btnEnviar').disabled = true;
+    $('main').innerHTML = '<div class="loading"><div><div class="spin"></div>Montando os e-mails…</div></div>';
+    google.script.run.withSuccessHandler(j => { D = JSON.parse(j); sel = Math.min(sel, Math.max(0, D.envios.length - 1)); seletor(); render(); })
+      .withFailureHandler(e => { $('main').innerHTML = `<div class="empty">Erro ao montar os e-mails: ${esc(e.message)}</div>`; })
+      .previewResumo(perJson());
+  }
+
+  function seletor() {
+    const meses = D.meses.slice();
+    [D.periodo.mesInicio, D.periodo.mesFim].forEach(m => { if (!meses.includes(m)) meses.push(m); });
+    meses.sort();
+    const op = meses.map(m => `<option value="${m}">${nomeMes(m)}</option>`).join('');
+    $('pDe').innerHTML = op; $('pAte').innerHTML = op;
+    $('pDe').value = D.periodo.mesInicio; $('pAte').value = D.periodo.mesFim;
+  }
 
   function zona(n) {
     if (n == null) return ['#64748b', '#f1f5f9'];
@@ -96,18 +125,20 @@
   const ini = s => String(s || '?').split(/\s+/).slice(0, 2).map(x => x[0]).join('').toUpperCase();
 
   function render() {
-    $('sub').textContent = `Período ${D.periodo.inicio} a ${D.periodo.fim} · destaque para ${nomeMes(D.periodo.mesFim)}`;
+    $('sub').textContent = `Período ${D.periodo.inicio} a ${D.periodo.fim} · último mês em destaque: ${nomeMes(D.periodo.mesFim)}`;
     if (!D.temDados) msg('warn', 'A Base Histórica está vazia — importe o relatório do Fluig antes de enviar.');
+    else if (!D.temMesFim) msg('warn', `A base não tem respostas de ${nomeMes(D.periodo.mesFim)}. Confira o período antes de enviar.`);
+    else msg('info', `Revise a prévia de cada destinatário antes de enviar · período ${esc(D.rotulo)}.`);
     if (!D.envios.length) {
       $('main').innerHTML = `<div class="side" style="grid-column:1/-1"><div class="empty">Nenhum destinatário ativo.<br><br><button class="btn btn-primary" onclick="google.script.run.mostrarCadastro()">Cadastrar times e gestores</button></div></div>`;
       return;
     }
     const tls = D.envios.map((e, i) => [e, i]).filter(([e]) => e.tipo === 'TL');
     const gs = D.envios.map((e, i) => [e, i]).filter(([e]) => e.tipo === 'Gestor');
-    const item = ([e, i]) => { const [c, bg] = zona(e.npsMes); return `<div class="item ${i === sel ? 'on' : ''}" data-i="${i}">
+    const item = ([e, i]) => { const [c, bg] = zona(e.nps); return `<div class="item ${i === sel ? 'on' : ''}" data-i="${i}">
       <div class="av ${e.tipo === 'TL' ? 'tl' : 'g'}">${esc(ini(e.nome))}</div>
       <div class="t"><b>${esc(e.nome)}</b><span>${esc(e.tipo === 'TL' ? 'TL · ' + e.time : e.time)}</span></div>
-      <span class="nps" style="color:${c};background:${bg}" title="NPS de ${nomeMes(D.periodo.mesFim)}">${fmt(e.npsMes)}</span></div>`; };
+      <span class="nps" style="color:${c};background:${bg}" title="NPS do período ${esc(D.rotulo)}">${fmt(e.nps)}</span></div>`; };
     $('main').innerHTML = `<div class="side">
         <h3>TLs · ${tls.length}</h3><div class="list" style="flex:none">${tls.map(item).join('') || '<div class="empty">Nenhum</div>'}</div>
         <h3>Gestores · ${gs.length}</h3><div class="list">${gs.map(item).join('') || '<div class="empty">Nenhum</div>'}</div>
@@ -131,7 +162,7 @@
     google.script.run.withSuccessHandler(r => {
       b1.disabled = b2.disabled = false;
       msg(r.success ? 'ok' : 'err', (r.success ? '✅ ' : '❌ ') + esc(r.message));
-    }).withFailureHandler(err => { b1.disabled = b2.disabled = false; msg('err', '❌ ' + esc(err.message)); }).enviarResumo(modo);
+    }).withFailureHandler(err => { b1.disabled = b2.disabled = false; msg('err', '❌ ' + esc(err.message)); }).enviarResumo(modo, null, perJson());
   }
 
   function msg(t, m) { const el = $('msg'); el.className = 'msg ' + t; el.innerHTML = m; }
