@@ -33,5 +33,5 @@ jobs:
             AT=$(jq -r '.token.access_token // .tokens.default.access_token' ~/.clasprc.json)
           fi
           curl -s -H "Authorization: Bearer $AT" "https://script.googleapis.com/v1/projects/$SCRIPT_ID/deployments" > /tmp/d.json
-          jq -r --arg D "$DEPLOYMENT_ID" '.deployments[]? | "\(.deploymentId[0:14])… | secret=\(if .deploymentId==$D then "SIM" else "não" end) | v=\(.deploymentConfig.versionNumber // "HEAD") | \(.deploymentConfig.description // "") | entradas=\([.entryPoints[]?.entryPointType] | join(",")) | webapp=\([.entryPoints[]? | select(.entryPointType=="WEB_APP") | .webApp.url[0:70]] | join(""))"' /tmp/d.json
+          jq -r --arg D "$DEPLOYMENT_ID" '.deployments[]? | "\(.deploymentId[0:14])… | secret=\(if .deploymentId==$D then "SIM" else "não" end) | v=\(.deploymentConfig.versionNumber // "HEAD") | \(.deploymentConfig.description // "") | entradas=\([.entryPoints[]?.entryPointType] | join(",")) | webapp=\([.entryPoints[]? | select(.entryPointType=="WEB_APP") | .webApp.url[0:70]] | join("")) | acesso=\([.entryPoints[]? | select(.entryPointType=="WEB_APP") | .webApp.entryPointConfig.access] | join(","))"' /tmp/d.json
           jq -r '.error.message // empty' /tmp/d.json
