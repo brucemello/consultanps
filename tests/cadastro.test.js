@@ -1,4 +1,4 @@
-// Testes do cadastro de times/gestores e do resumo de NPS (src/Cadastro.js).
+// Testes do cadastro de times/gestores e do resumo de NPS (src/ResumoTimes.js).
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
