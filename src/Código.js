@@ -67,6 +67,24 @@ const ACAO_OUTROS = 'Acompanhamento de rotina de Customer Success';
 const COMENTARIOS_VAZIOS = ['sem comentários', 'sem comentarios', 'sem comentário', 'sem comentario', 'nda', 'nada', 'n/a', 'na', '-', '--', '.'];
 
 // ============================================================
+// CONTROLE DE ACESSO
+// ============================================================
+// O Web App roda como o dono (quem implanta) e fica aberto para o domínio TOTVS.
+// Quem não for o dono vê só o Dashboard (leitura); todas as funções que gravam,
+// enviam e-mail ou mexem em configurações exigem o dono.
+
+/** true para o dono; também true quando não há usuário ativo (gatilhos agendados). */
+function ehDono_() {
+  const ativo = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+  const dono = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+  return !ativo || ativo === dono;
+}
+
+function exigirDono_() {
+  if (!ehDono_()) throw new Error('Acesso restrito: somente o responsável pela Central NPS pode fazer isso.');
+}
+
+// ============================================================
 // MENU, WEB APP E JANELAS
 // ============================================================
 
@@ -92,8 +110,9 @@ function onOpen() {
 /** Web App: a mesma Central NPS (aba inicial por ?tab=dash|imp|env|cad|auto). */
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  const tab = p.tab || (p.p === 'importar' ? 'imp' : 'dash');
-  return painelHtml_(tab, null, 'webapp')
+  const leitura = !ehDono_();
+  const tab = leitura ? 'dash' : (p.tab || (p.p === 'importar' ? 'imp' : 'dash'));
+  return painelHtml_(tab, null, 'webapp', leitura)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -102,10 +121,11 @@ function include(nome) {
   return HtmlService.createHtmlOutputFromFile(nome).getContent();
 }
 
-function contextoPaginas_(modo, tab, periodoEscolhido) {
+function contextoPaginas_(modo, tab, periodoEscolhido, leitura) {
   const urlApp = URL_PAINEL;
   return JSON.stringify({
     modo: modo || 'dialog',
+    leitura: !!leitura,
     tabInicial: tab || 'dash',
     periodoEscolhido: periodoEscolhido || null,
     urlApp: urlApp,
@@ -116,33 +136,43 @@ function contextoPaginas_(modo, tab, periodoEscolhido) {
   });
 }
 
-function painelHtml_(tab, periodoEscolhido, modo) {
+function painelHtml_(tab, periodoEscolhido, modo, leitura) {
   const t = HtmlService.createTemplateFromFile('Painel');
-  t.contexto = contextoPaginas_(modo || 'dialog', tab, periodoEscolhido);
+  t.leitura = !!leitura;
+  t.contexto = contextoPaginas_(modo || 'dialog', tab, periodoEscolhido, leitura);
   return t.evaluate().setTitle('Central NPS · Protheus');
 }
 
 /** Abre a Central NPS em tela grande dentro da planilha, já na aba pedida. */
 function abrirPainel(tab, periodoEscolhido) {
+  exigirDono_();
   const html = painelHtml_(typeof tab === 'string' ? tab : 'dash', periodoEscolhido || null).setWidth(1600).setHeight(950);
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
 
 // Atalhos do menu (nomes mantidos por compatibilidade)
-function abrirDashboard() { abrirPainel('dash'); }
-function mostrarInterfaceUpload() { abrirPainel('imp'); }
-function abrirImportadorAutomatico() { abrirPainel('imp'); }
-function mostrarCadastro() { abrirPainel('cad'); }
-function abrirAutomacoes() { abrirPainel('auto'); }
+function abrirDashboard() {
+  exigirDono_(); abrirPainel('dash'); }
+function mostrarInterfaceUpload() {
+  exigirDono_(); abrirPainel('imp'); }
+function abrirImportadorAutomatico() {
+  exigirDono_(); abrirPainel('imp'); }
+function mostrarCadastro() {
+  exigirDono_(); abrirPainel('cad'); }
+function abrirAutomacoes() {
+  exigirDono_(); abrirPainel('auto'); }
 function mostrarEnvioResumo(periodoJson) {
+  exigirDono_();
   abrirPainel('env', periodoJson ? periodoDeMeses_(JSON.parse(periodoJson)) : null);
 }
 
 function abrirPainelNavegador() {
+  exigirDono_();
   abrirUrl_(URL_PAINEL, 'Abrindo a Central NPS...');
 }
 
 function abrirFluig() {
+  exigirDono_();
   abrirUrl_(URL_FLUIG, 'Redirecionando para o Portal Fluig...');
 }
 
@@ -256,6 +286,7 @@ function classificarNota_(status, nota) {
  * datas como "dd/mm/aaaa hh:mm:ss") e consolida na Base_Historica.
  */
 function importarLinhas(matriz, nomeArquivo) {
+  exigirDono_();
   const lock = LockService.getDocumentLock();
   if (!lock.tryLock(30000)) {
     return { success: false, message: 'Outra importação está em andamento. Tente de novo em alguns segundos.' };
@@ -291,11 +322,13 @@ function importarLinhas(matriz, nomeArquivo) {
 
 // Mantido por compatibilidade com versões antigas da tela de upload.
 function processarUpload(fileData, fileName) {
+  exigirDono_();
   return { success: false, message: 'Esta tela de upload foi substituída. Feche e abra de novo pelo menu "Importar relatório do Fluig".' };
 }
 
 // 1. CONSOLIDAÇÃO DA BASE HISTÓRICA (COM CABEÇALHO PADRONIZADO: "Módulo / Produto")
 function consolidarBaseHistorica(dados) {
+  exigirDono_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let baseSheet = ss.getSheetByName('Base_Historica');
 
@@ -410,6 +443,7 @@ function getDadosDashboard() {
 
 // 2. RECONSTRÓI A ABA ANALISE_QUALI COM O MESMO NOME DE COLUNA ("Módulo / Produto")
 function reconstruirAnaliseQualitativa(dataBase) {
+  exigirDono_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName('Analise_Quali');
   if (!sheet) sheet = ss.insertSheet('Analise_Quali');
@@ -436,6 +470,7 @@ function reconstruirAnaliseQualitativa(dataBase) {
 
 // 3. GERADOR GERAL DE DASHBOARDS E PROCESSAMENTOS
 function gerarAnaliseEGraficos() {
+  exigirDono_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const baseSheet = ss.getSheetByName('Base_Historica');
   if (!baseSheet) return;
@@ -520,6 +555,7 @@ function gerarAnaliseEGraficos() {
 }
 
 function aplicarFormatacaoCondicional(sheet, maxRow) {
+  exigirDono_();
   sheet.clearConditionalFormatRules();
   const rangeNPS = sheet.getRange(2, 9, maxRow - 1, 1);
 
@@ -532,6 +568,7 @@ function aplicarFormatacaoCondicional(sheet, maxRow) {
 
 // 4. RANKING DE PROBLEMAS COM NOME DE COLUNA PADRONIZADO
 function gerarRankingEDecisao() {
+  exigirDono_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const qualiSheet = ss.getSheetByName('Analise_Quali');
   if (!qualiSheet) return;
@@ -597,6 +634,7 @@ function gerarRankingEDecisao() {
 
 // 5. PLANO DE AÇÃO INTELIGENTE POR MÓDULO
 function gerarPlanoDeAcaoInteligente() {
+  exigirDono_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const qualiSheet = ss.getSheetByName('Analise_Quali');
   let planoSheet = ss.getSheetByName('Plano_de_Acao');
@@ -645,6 +683,7 @@ function gerarPlanoDeAcaoInteligente() {
 
 // 6. RELATÓRIO CONSOLIDADO E PRINCIPAIS ACHADOS COM COLUNA MÓDULO / PRODUTO
 function gerarRelatorioConsolidado() {
+  exigirDono_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const baseSheet = ss.getSheetByName('Base_Historica');
   const rankSheet = ss.getSheetByName('Ranking_Problemas');
@@ -748,6 +787,7 @@ function gerarRelatorioConsolidado() {
  * GRAVA O HISTÓRICO DE NPS LENDO DIRETAMENTE CADA MÊS/ANO DA ABA DASHBOARD_KPIS
  */
 function gravarSnapshotNPS() {
+  exigirDono_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashSheet = ss.getSheetByName('Dashboard_KPIs');
 
@@ -829,6 +869,7 @@ function primeiroDiaUtil_(ano, mes) {
 
 /** Disparado todo dia pelo gatilho; só envia no 1º dia útil do mês. */
 function lembreteImportacaoMensal() {
+  exigirDono_();
   const hoje = new Date();
   const pdu = primeiroDiaUtil_(hoje.getFullYear(), hoje.getMonth());
   if (fmtDia_(hoje) !== fmtDia_(pdu)) return;
@@ -836,6 +877,7 @@ function lembreteImportacaoMensal() {
 }
 
 function enviarLembreteTeste() {
+  exigirDono_();
   const para = enviarLembrete_(true);
   SpreadsheetApp.getUi().alert(`📧 Lembrete de teste enviado para ${para}.`);
 }
@@ -891,12 +933,14 @@ function enviarLembrete_(teste) {
 }
 
 function instalarLembreteMensal(silencioso) {
+  exigirDono_();
   removerGatilhos_(HANDLER_LEMBRETE);
   ScriptApp.newTrigger(HANDLER_LEMBRETE).timeBased().everyDays(1).atHour(7).inTimezone(Session.getScriptTimeZone()).create();
   if (silencioso !== true) SpreadsheetApp.getUi().alert(`✅ Lembrete ativado. Você receberá um e-mail às 7h do 1º dia útil de cada mês.\nPróximo: ${proximoLembrete_()}.`);
 }
 
 function removerLembreteMensal() {
+  exigirDono_();
   const n = removerGatilhos_(HANDLER_LEMBRETE);
   SpreadsheetApp.getUi().alert(n ? '🔕 Lembrete desativado.' : 'Não havia lembrete ativo.');
 }
@@ -914,7 +958,7 @@ function gatilhoAtivo_(handler) {
 }
 
 function fmtDataBR_(d) {
-  return fmtDataBR_(d);
+  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
 }
 
 function proximoLembrete_() {

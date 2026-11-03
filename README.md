@@ -25,6 +25,14 @@ Abra pelo menu **🚀 NPS Protheus → 🧭 Abrir Central NPS** ou direto no nav
 | 👥 **Times e gestores** | `src/PainelCadastro.html` | Times (módulos, TL, e-mail) e gestores (times acompanhados) → abas `Cadastro_Times` e `Cadastro_Gestores` |
 | ⏰ **Automações** | `src/PainelAutomacoes.html` | Liga/desliga lembrete (1º dia útil) e envio automático (2º dia útil), status e histórico de envios |
 
+### Acesso
+
+O Web App fica aberto para o domínio TOTVS e roda como o dono (quem implanta):
+
+- **Você (dono)** vê a Central completa.
+- **Qualquer outra pessoa da TOTVS** (TLs e gestores que clicam no botão do e-mail) vê só o **Dashboard**, em modo leitura.
+- No servidor, toda função que grava, envia e-mail ou mexe em configuração chama `exigirDono_()` — o teste `tests/acesso.test.js` garante que nenhuma fica de fora.
+
 `src/Painel.html` é a moldura (barra superior e abas) e inclui os módulos. Cada módulo isola seu CSS (`#v-…`) e seus IDs (prefixo `d-`, `i-`, `e-`, `c-`, `a-`).
 
 ### E-mails

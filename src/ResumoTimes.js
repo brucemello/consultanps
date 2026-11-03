@@ -58,6 +58,7 @@ function lerCadastro_() {
 
 /** Dados para a tela de cadastro. */
 function getCadastro() {
+  exigirDono_();
   const c = lerCadastro_();
   const modulos = {};
   const base = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Base_Historica');
@@ -102,6 +103,7 @@ function validarCadastro_(c) {
 }
 
 function salvarCadastro(json) {
+  exigirDono_();
   const c = JSON.parse(json);
   const erros = validarCadastro_(c);
   if (erros.length) return { success: false, message: erros.slice(0, 6).join('<br>') };
@@ -464,13 +466,14 @@ function prepararEnvios_(sel) {
   const valores = base && base.getLastRow() > 1 ? base.getRange(2, 1, base.getLastRow() - 1, CABECALHOS_BASE.length).getValues() : [];
   const regs = registrosDeBase_(valores, FILTROS_PADRAO);
   const periodo = periodoDeMeses_(sel);
-  const envios = montarEnvios_(lerCadastro_(), regs, periodo, { planilha: URL_PAINEL });
+  const envios = montarEnvios_(lerCadastro_(), regs, periodo, { planilha: URL_PAINEL + '?tab=dash' });
   const meses = [...new Set(regs.map(r => r.mes))].sort();
   return { periodo: periodo, envios: envios, meses: meses, temDados: regs.length > 0, temMesFim: regs.some(r => r.mes === periodo.mesFim) };
 }
 
 /** Prévia para a tela de envio. */
 function previewResumo(periodoJson) {
+  exigirDono_();
   const p = prepararEnvios_(periodoJson ? JSON.parse(periodoJson) : null);
   return JSON.stringify({
     periodo: p.periodo, rotulo: rotuloPeriodo_(p.periodo), meses: p.meses, temDados: p.temDados, temMesFim: p.temMesFim, meuEmail: Session.getEffectiveUser().getEmail(),
@@ -483,6 +486,7 @@ function previewResumo(periodoJson) {
  * modo = 'real'  → envia para cada TL e gestor cadastrado
  */
 function enviarResumo(modo, rotulo, periodoJson) {
+  exigirDono_();
   const p = prepararEnvios_(periodoJson ? JSON.parse(periodoJson) : null);
   if (!p.envios.length) return { success: false, message: 'Nenhum destinatário ativo no cadastro.' };
   const eu = Session.getEffectiveUser().getEmail();
@@ -542,6 +546,7 @@ function proximoEnvioAuto_(hoje) {
  * Se a base ainda não tiver dados do mês fechado, não envia e avisa o dono.
  */
 function envioAutomaticoResumo() {
+  exigirDono_();
   const hoje = new Date();
   if (fmtDia_(hoje) !== fmtDia_(segundoDiaUtil_(hoje.getFullYear(), hoje.getMonth()))) return;
 
@@ -577,23 +582,27 @@ function envioAutomaticoResumo() {
 }
 
 function instalarEnvioAutomatico(silencioso) {
+  exigirDono_();
   removerGatilhos_(HANDLER_ENVIO_AUTO);
   ScriptApp.newTrigger(HANDLER_ENVIO_AUTO).timeBased().everyDays(1).atHour(HORA_ENVIO_AUTO).inTimezone(Session.getScriptTimeZone()).create();
   if (silencioso !== true) SpreadsheetApp.getUi().alert(`✅ Envio automático ativado.\nO resumo vai para TLs e gestores às ${HORA_ENVIO_AUTO}h do 2º dia útil de cada mês.\nPróximo: ${fmtDataBR_(proximoEnvioAuto_())}.`);
 }
 
 function removerEnvioAutomatico() {
+  exigirDono_();
   const n = removerGatilhos_(HANDLER_ENVIO_AUTO);
   SpreadsheetApp.getUi().alert(n ? '🔕 Envio automático desativado.' : 'O envio automático não estava ativo.');
 }
 
 function ativarAutomacoes() {
+  exigirDono_();
   instalarLembreteMensal(true);
   instalarEnvioAutomatico(true);
   statusAutomacoes();
 }
 
 function statusAutomacoes() {
+  exigirDono_();
   const c = lerCadastro_();
   const tls = c.times.filter(t => t.ativo).length, gs = c.gestores.filter(g => g.ativo).length;
   const p = prepararEnvios_();
@@ -614,6 +623,7 @@ function statusAutomacoes() {
 // ============================================================
 
 function getStatusAutomacoes() {
+  exigirDono_();
   const c = lerCadastro_();
   const p = prepararEnvios_();
   const tz = Session.getScriptTimeZone();
@@ -638,6 +648,7 @@ function getStatusAutomacoes() {
 }
 
 function alternarAutomacao(qual, ligar) {
+  exigirDono_();
   if (qual === 'lembrete') { if (ligar) instalarLembreteMensal(true); else removerGatilhos_(HANDLER_LEMBRETE); }
   else if (qual === 'envio') { if (ligar) instalarEnvioAutomatico(true); else removerGatilhos_(HANDLER_ENVIO_AUTO); }
   else throw new Error('Automação desconhecida: ' + qual);
@@ -645,5 +656,6 @@ function alternarAutomacao(qual, ligar) {
 }
 
 function enviarLembreteTestePainel() {
+  exigirDono_();
   return enviarLembrete_(true);
 }

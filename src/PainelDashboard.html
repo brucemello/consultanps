@@ -264,6 +264,7 @@
   let DB = null, charts = {}, qualiFiltro = { cl: '', busca: '' };
 
   // ---------- carga ----------
+  if (CTX.leitura) { $('btnImportar').classList.add('hidden'); $('btnResumo').classList.add('hidden'); }
   $('btnImportar').removeAttribute('target');
   $('btnImportar').href = '#';
   $('btnImportar').addEventListener('click', e => { e.preventDefault(); PAINEL.ir('imp'); });

@@ -31,6 +31,7 @@
     .nav-tab:hover { background: rgba(255,255,255,.08); color: #fff; }
     .nav-tab.on { background: rgba(255,255,255,.14); color: #fff; }
     .nav-tab .ic { font-size: 14px; }
+    .ro { font-size: 12px; font-weight: 700; color: #bcd0f0; border: 1px solid rgba(255,255,255,.2); padding: 5px 10px; border-radius: 999px; margin-right: auto; }
     .shell-meta { flex: none; display: flex; align-items: center; gap: 12px; font-size: 12px; color: #93b0e0; }
     .shell-meta a { color: #fff; text-decoration: none; font-weight: 600; border: 1px solid rgba(255,255,255,.25); padding: 6px 10px; border-radius: 8px; }
     .shell-meta a:hover { background: rgba(255,255,255,.1); }
@@ -91,7 +92,8 @@
         <div class="logo">N</div>
         <div><b>Central NPS</b><small>Protheus · Insights CX</small></div>
       </div>
-      <nav class="tabs">
+      <? if (leitura) { ?><div class="ro">👁 Somente leitura</div><? } ?>
+      <nav class="tabs" <? if (leitura) { ?>style="display:none"<? } ?>>
         <button class="nav-tab" data-tab="dash"><span class="ic">📊</span><span class="lbl">Dashboard</span></button>
         <button class="nav-tab" data-tab="imp"><span class="ic">📥</span><span class="lbl">Importar</span></button>
         <button class="nav-tab" data-tab="env"><span class="ic">✉️</span><span class="lbl">Envio de resumo</span></button>
@@ -107,10 +109,10 @@
   </header>
 
   <?!= include('PainelDashboard') ?>
-  <?!= include('PainelImportar') ?>
-  <?!= include('PainelEnvio') ?>
-  <?!= include('PainelCadastro') ?>
-  <?!= include('PainelAutomacoes') ?>
+  <? if (!leitura) { ?><?!= include('PainelImportar') ?><? } ?>
+  <? if (!leitura) { ?><?!= include('PainelEnvio') ?><? } ?>
+  <? if (!leitura) { ?><?!= include('PainelCadastro') ?><? } ?>
+  <? if (!leitura) { ?><?!= include('PainelAutomacoes') ?><? } ?>
 
   <script>
     document.getElementById('shell-fluig').href = PAINEL.ctx.urlFluig;
