@@ -82,10 +82,16 @@ function onOpen() {
     .addItem('👥 Cadastro de times e gestores', 'mostrarCadastro')
     .addItem('✉️ Enviar resumo do NPS por e-mail', 'mostrarEnvioResumo')
     .addSeparator()
-    .addSubMenu(ui.createMenu('⏰ Lembrete mensal de importação')
-      .addItem('Ativar lembrete (1º dia útil)', 'instalarLembreteMensal')
+    .addSubMenu(ui.createMenu('⏰ Automações')
+      .addItem('✅ Ativar todas (lembrete + envio automático)', 'ativarAutomacoes')
+      .addItem('📋 Ver status das automações', 'statusAutomacoes')
+      .addSeparator()
+      .addItem('Ativar lembrete de importação (1º dia útil)', 'instalarLembreteMensal')
+      .addItem('Ativar envio automático do resumo (2º dia útil)', 'instalarEnvioAutomatico')
       .addItem('Enviar lembrete de teste agora', 'enviarLembreteTeste')
-      .addItem('Desativar lembrete', 'removerLembreteMensal'))
+      .addSeparator()
+      .addItem('Desativar lembrete de importação', 'removerLembreteMensal')
+      .addItem('Desativar envio automático', 'removerEnvioAutomatico'))
     .addToUi();
 }
 
@@ -886,29 +892,36 @@ function enviarLembrete_(teste) {
   return para;
 }
 
-function instalarLembreteMensal() {
-  removerGatilhos_();
+function instalarLembreteMensal(silencioso) {
+  removerGatilhos_(HANDLER_LEMBRETE);
   ScriptApp.newTrigger(HANDLER_LEMBRETE).timeBased().everyDays(1).atHour(7).inTimezone(Session.getScriptTimeZone()).create();
-  const prox = proximoLembrete_();
-  SpreadsheetApp.getUi().alert(`✅ Lembrete ativado. Você receberá um e-mail às 7h do 1º dia útil de cada mês.\nPróximo: ${prox}.`);
+  if (silencioso !== true) SpreadsheetApp.getUi().alert(`✅ Lembrete ativado. Você receberá um e-mail às 7h do 1º dia útil de cada mês.\nPróximo: ${proximoLembrete_()}.`);
 }
 
 function removerLembreteMensal() {
-  const n = removerGatilhos_();
+  const n = removerGatilhos_(HANDLER_LEMBRETE);
   SpreadsheetApp.getUi().alert(n ? '🔕 Lembrete desativado.' : 'Não havia lembrete ativo.');
 }
 
-function removerGatilhos_() {
+function removerGatilhos_(handler) {
   let n = 0;
   ScriptApp.getProjectTriggers().forEach(t => {
-    if (t.getHandlerFunction() === HANDLER_LEMBRETE) { ScriptApp.deleteTrigger(t); n++; }
+    if (t.getHandlerFunction() === (handler || HANDLER_LEMBRETE)) { ScriptApp.deleteTrigger(t); n++; }
   });
   return n;
+}
+
+function gatilhoAtivo_(handler) {
+  return ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === handler);
+}
+
+function fmtDataBR_(d) {
+  return fmtDataBR_(d);
 }
 
 function proximoLembrete_() {
   const hoje = new Date();
   let d = primeiroDiaUtil_(hoje.getFullYear(), hoje.getMonth());
   if (fmtDia_(d) < fmtDia_(hoje) || (fmtDia_(d) === fmtDia_(hoje) && hoje.getHours() >= 7)) d = primeiroDiaUtil_(hoje.getFullYear(), hoje.getMonth() + 1);
-  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+  return fmtDataBR_(d);
 }

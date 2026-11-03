@@ -87,4 +87,12 @@ t('textos do cadastro são escapados no HTML do e-mail', () => {
   assert.ok(!html.includes('<b>X</b>') && html.includes('&lt;b&gt;X&lt;/b&gt;'));
 });
 
+t('2º dia útil do mês', () => {
+  const f = s => run(`fmtDia_(segundoDiaUtil_(${s}))`);
+  assert.strictEqual(f('2026, 10'), '2026-11-04'); // 02/11 Finados → 1º útil 03, 2º útil 04
+  assert.strictEqual(f('2026, 11'), '2026-12-02');
+  assert.strictEqual(f('2027, 0'), '2027-01-05');
+  assert.strictEqual(f('2026, 4'), '2026-05-05');  // 01/05 feriado (sex) → 04 seg, 05 ter
+});
+
 console.log(`cadastro.test.js: ${ok} testes ok`);

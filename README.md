@@ -28,6 +28,15 @@ Código do Google Apps Script com deploy automático via GitHub Actions.
 - **TL**: NPS do último mês fechado com variação, acumulado do ano, composição P/N/D, evolução mês a mês, causas raiz, até 3 comentários de detratores e 1 elogio.
 - **Gestor**: NPS consolidado, ranking dos times (mês, variação, acumulado, respostas, detratores), pontos de atenção (queda ≥ 10 pts ou NPS negativo), causas raiz e voz do cliente.
 
+### Automações (menu ⏰ Automações)
+
+| Quando | O quê |
+|---|---|
+| 1º dia útil, 7h | Lembrete para você importar o relatório do Fluig |
+| 2º dia útil, 8h | Envio automático do resumo para TLs e gestores (uma vez por mês). Se a base não tiver dados do mês fechado, não envia e avisa você |
+
+Feriados nacionais e fins de semana são pulados. Ative uma vez em *⏰ Automações → Ativar todas*.
+
 ## Testes
 
 `for t in tests/*.test.js; do node $t; done` — roda também no deploy, antes do `clasp push`.

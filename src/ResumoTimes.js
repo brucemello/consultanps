@@ -457,7 +457,7 @@ function prepararEnvios_() {
   const regs = registrosDeBase_(valores, FILTROS_PADRAO);
   const periodo = periodoPadrao_(new Date());
   const envios = montarEnvios_(lerCadastro_(), regs, periodo, { planilha: ss.getUrl() });
-  return { periodo: periodo, envios: envios, temDados: regs.length > 0 };
+  return { periodo: periodo, envios: envios, temDados: regs.length > 0, temMesFim: regs.some(r => r.mes === periodo.mesFim) };
 }
 
 /** Prévia para a tela de envio. */
@@ -473,7 +473,7 @@ function previewResumo() {
  * modo = 'teste' → envia todos os e-mails só para você (assunto com [TESTE])
  * modo = 'real'  → envia para cada TL e gestor cadastrado
  */
-function enviarResumo(modo) {
+function enviarResumo(modo, rotulo) {
   const p = prepararEnvios_();
   if (!p.envios.length) return { success: false, message: 'Nenhum destinatário ativo no cadastro.' };
   const eu = Session.getEffectiveUser().getEmail();
@@ -491,7 +491,7 @@ function enviarResumo(modo) {
       htmlBody: e.html,
       name: 'NPS Protheus'
     });
-    linhasLog.push([agora, e.tipo, e.nome, teste ? eu : e.para, `${p.periodo.inicio} a ${p.periodo.fim}`, e.nps == null ? '' : Math.round(e.nps * 10) / 10, e.assunto, teste ? 'Teste' : 'Enviado']);
+    linhasLog.push([agora, e.tipo, e.nome, teste ? eu : e.para, `${p.periodo.inicio} a ${p.periodo.fim}`, e.nps == null ? '' : Math.round(e.nps * 10) / 10, e.assunto, teste ? 'Teste' : (rotulo || 'Manual')]);
   });
   log.getRange(log.getLastRow() + 1, 1, linhasLog.length, CAB_LOG.length).setValues(linhasLog);
   log.getRange(2, 1, log.getLastRow() - 1, 1).setNumberFormat('dd/mm/yyyy hh:mm');
@@ -502,4 +502,100 @@ function enviarResumo(modo) {
       ? `${p.envios.length} e-mail(s) de teste enviados para ${eu}.`
       : `${p.envios.length} e-mail(s) enviados: ${p.envios.filter(e => e.tipo === 'TL').length} para TLs e ${p.envios.filter(e => e.tipo === 'Gestor').length} para gestores.`
   };
+}
+
+// ============================================================
+// ENVIO AUTOMÁTICO (2º DIA ÚTIL)
+// ============================================================
+
+const HANDLER_ENVIO_AUTO = 'envioAutomaticoResumo';
+const HORA_ENVIO_AUTO = 8;
+
+function segundoDiaUtil_(ano, mes) {
+  const d = primeiroDiaUtil_(ano, mes);
+  d.setDate(d.getDate() + 1);
+  while (!ehDiaUtil_(d)) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+function proximoEnvioAuto_(hoje) {
+  hoje = hoje || new Date();
+  let d = segundoDiaUtil_(hoje.getFullYear(), hoje.getMonth());
+  const jaFoi = PropertiesService.getDocumentProperties().getProperty('ENVIO_AUTO_MES') === periodoPadrao_(hoje).mesFim;
+  if (fmtDia_(d) < fmtDia_(hoje) || (fmtDia_(d) === fmtDia_(hoje) && (hoje.getHours() >= HORA_ENVIO_AUTO + 1 || jaFoi)))
+    d = segundoDiaUtil_(hoje.getFullYear(), hoje.getMonth() + 1);
+  return d;
+}
+
+/**
+ * Disparado todo dia pelo gatilho; só age no 2º dia útil.
+ * Envia o resumo do mês fechado para TLs e gestores — uma vez por mês.
+ * Se a base ainda não tiver dados do mês fechado, não envia e avisa o dono.
+ */
+function envioAutomaticoResumo() {
+  const hoje = new Date();
+  if (fmtDia_(hoje) !== fmtDia_(segundoDiaUtil_(hoje.getFullYear(), hoje.getMonth()))) return;
+
+  const props = PropertiesService.getDocumentProperties();
+  const periodo = periodoPadrao_(hoje);
+  if (props.getProperty('ENVIO_AUTO_MES') === periodo.mesFim) return;
+
+  const eu = Session.getEffectiveUser().getEmail();
+  const p = prepararEnvios_();
+  const url = SpreadsheetApp.getActiveSpreadsheet().getUrl();
+  const avisar = (assunto, corpo) => MailApp.sendEmail({ to: eu, subject: assunto, name: 'NPS Protheus',
+    htmlBody: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#0f172a;max-width:560px">${corpo}<p style="margin-top:16px"><a href="${url}" style="color:#2563eb;font-weight:600">Abrir a planilha</a></p></div>` });
+
+  if (!p.temMesFim) {
+    avisar(`⚠️ NPS Protheus · resumo de ${nomeMes_(periodo.mesFim)} NÃO enviado`,
+      `<p>O envio automático de hoje foi suspenso: a Base Histórica ainda não tem respostas de <b>${nomeMes_(periodo.mesFim)}</b>.</p>
+       <p>Importe o relatório do Fluig e envie pelo menu <b>✉️ Enviar resumo do NPS por e-mail</b>.</p>`);
+    return;
+  }
+  if (!p.envios.length) {
+    avisar(`⚠️ NPS Protheus · nenhum destinatário ativo`, `<p>O envio automático não encontrou times ou gestores ativos no cadastro.</p>`);
+    return;
+  }
+
+  const r = enviarResumo('real', 'Automático');
+  if (r.success) {
+    props.setProperty('ENVIO_AUTO_MES', periodo.mesFim);
+    avisar(`✅ NPS Protheus · resumo de ${nomeMes_(periodo.mesFim)} enviado`,
+      `<p>${escHtml_(r.message)}</p><ul>${p.envios.map(e => `<li><b>${escHtml_(e.nome)}</b> (${e.tipo}) · ${escHtml_(e.para)} · NPS ${fmtNps_(e.npsMes)}</li>`).join('')}</ul>`);
+  } else {
+    avisar(`❌ NPS Protheus · falha no envio automático`, `<p>${escHtml_(r.message)}</p>`);
+  }
+}
+
+function instalarEnvioAutomatico(silencioso) {
+  removerGatilhos_(HANDLER_ENVIO_AUTO);
+  ScriptApp.newTrigger(HANDLER_ENVIO_AUTO).timeBased().everyDays(1).atHour(HORA_ENVIO_AUTO).inTimezone(Session.getScriptTimeZone()).create();
+  if (silencioso !== true) SpreadsheetApp.getUi().alert(`✅ Envio automático ativado.\nO resumo vai para TLs e gestores às ${HORA_ENVIO_AUTO}h do 2º dia útil de cada mês.\nPróximo: ${fmtDataBR_(proximoEnvioAuto_())}.`);
+}
+
+function removerEnvioAutomatico() {
+  const n = removerGatilhos_(HANDLER_ENVIO_AUTO);
+  SpreadsheetApp.getUi().alert(n ? '🔕 Envio automático desativado.' : 'O envio automático não estava ativo.');
+}
+
+function ativarAutomacoes() {
+  instalarLembreteMensal(true);
+  instalarEnvioAutomatico(true);
+  statusAutomacoes();
+}
+
+function statusAutomacoes() {
+  const c = lerCadastro_();
+  const tls = c.times.filter(t => t.ativo).length, gs = c.gestores.filter(g => g.ativo).length;
+  const p = prepararEnvios_();
+  const linhas = [
+    `${gatilhoAtivo_(HANDLER_LEMBRETE) ? '✅' : '⛔'} Lembrete de importação (1º dia útil, 7h) — próximo: ${proximoLembrete_()}`,
+    `${gatilhoAtivo_(HANDLER_ENVIO_AUTO) ? '✅' : '⛔'} Envio automático do resumo (2º dia útil, ${HORA_ENVIO_AUTO}h) — próximo: ${fmtDataBR_(proximoEnvioAuto_())}`,
+    '',
+    `Destinatários ativos: ${tls} TL(s) e ${gs} gestor(es).`,
+    `Dados de ${nomeMes_(p.periodo.mesFim)} na base: ${p.temMesFim ? 'sim ✅' : 'não ⚠️ — importe antes do envio'}.`
+  ];
+  const ult = PropertiesService.getDocumentProperties().getProperty('ENVIO_AUTO_MES');
+  if (ult) linhas.push(`Último envio automático: resumo de ${nomeMes_(ult)}.`);
+  SpreadsheetApp.getUi().alert('⏰ Automações do NPS', linhas.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
 }
