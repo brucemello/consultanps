@@ -37,8 +37,8 @@ O Web App fica aberto para o domínio TOTVS e roda como o dono (quem implanta):
 
 ### E-mails
 
-- **TL**: NPS do último mês fechado com variação, acumulado do período, NPS por semestre (1º jan–jun, 2º jul–dez, parcial até o mês fechado), composição P/N/D, evolução mês a mês, causas raiz, até 3 comentários de detratores e 1 elogio.
-- **Gestor**: NPS consolidado, NPS por semestre, ranking dos times (mês, variação, período, 1º e 2º semestre, detratores), pontos de atenção (queda ≥ 10 pts ou NPS negativo), causas raiz e voz do cliente.
+- **TL**: em destaque, o **NPS do semestre do mês fechado** (jan–jun → 1º; jul–dez → 2º), que é o valor do Painel da Agilidade, comparado ao semestre anterior; depois NPS do mês, o outro semestre e o período do envio, composição P/N/D, evolução mês a mês, causas raiz, até 3 comentários de detratores e 1 elogio.
+- **Gestor**: mesmo destaque do semestre (consolidado), ranking dos times ordenado pelo semestre em destaque (outro semestre, mês, variação, detratores), pontos de atenção (queda ≥ 10 pts ou NPS negativo), causas raiz e voz do cliente.
 
 ### Automações (menu ⏰ Automações)
 

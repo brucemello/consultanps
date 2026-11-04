@@ -75,7 +75,8 @@ t('envios: um por TL ativo e um por gestor, com times corretos', () => {
   assert.deepStrictEqual(envios.map(e => e.tipo + ':' + e.nome), ['TL:João Silva', 'TL:Maria', 'Gestor:Ana Gestora', 'Gestor:Beto']);
   assert.strictEqual(envios[2].time, 'Fiscal, Compras');
   assert.strictEqual(envios[3].time, 'Compras');
-  assert.ok(/^NPS Fiscal · jan a out\/2026: 16,7 · out\/26 33,3 \(▲ 33,3\)$/.test(envios[0].assunto), envios[0].assunto);
+  assert.ok(/^NPS Fiscal · 2º semestre\/2026: 16,7 · out\/26 33,3$/.test(envios[0].assunto), envios[0].assunto);
+  assert.ok(envios[0].html.includes('Valor para o Painel da Agilidade') && envios[0].html.includes('NPS do 2º semestre/2026'));
   assert.ok(envios[0].html.includes('Olá, João!'));
   assert.ok(envios[0].html.includes('Falta suporte'));
   assert.ok(envios[2].html.includes('Ranking dos times'));
@@ -119,8 +120,15 @@ t('NPS por semestre (1º jan–jun, 2º jul–dez, parcial até o mês fechado)'
   assert.strictEqual(sm.variacao, -50);
   const mar = run(`resumoModulos_(REGS2, ['SIGAFIS'], '2026-01', '2026-03').semestres`);
   assert.strictEqual(mar.h1.parcial, true); assert.strictEqual(mar.h2.futuro, true); assert.strictEqual(mar.h2.nps, null);
-  const html = run(`blocoSemestres_(resumoModulos_(REGS2, ['SIGAFIS'], '2026-07', '2026-10').semestres)`);
-  assert.ok(html.includes('1º semestre') && html.includes('2º semestre') && html.includes('jul a out/26 · parcial'));
+  // semestre em destaque segue o mês fechado
+  const out = run(`resumoModulos_(REGS2, ['SIGAFIS'], '2026-07', '2026-10').semestres`);
+  assert.strictEqual(out.atual, 'h2'); assert.strictEqual(out.nomeDestaque, '2º semestre/2026');
+  assert.strictEqual(out.destaque.nps, 0); assert.strictEqual(out.variacaoDestaque, -50); // vs 1º semestre
+  assert.strictEqual(mar.atual, 'h1'); assert.strictEqual(mar.nomeDestaque, '1º semestre/2026'); assert.strictEqual(mar.nomeAnterior, '2º semestre/2025');
+  assert.strictEqual(run(`resumoModulos_(REGS2, ['SIGAFIS'], '2026-06', '2026-06').semestres.atual`), 'h1');  // junho é 1º
+  assert.strictEqual(run(`resumoModulos_(REGS2, ['SIGAFIS'], '2026-07', '2026-07').semestres.atual`), 'h2');  // julho é 2º
+  const html = run(`heroSemestre_(resumoModulos_(REGS2, ['SIGAFIS'], '2026-07', '2026-10').semestres)`);
+  assert.ok(html.includes('NPS do 2º semestre/2026') && html.includes('jul a out/26 · parcial') && html.includes('vs 1º semestre/2026'));
 });
 
 console.log(`cadastro.test.js: ${ok} testes ok`);

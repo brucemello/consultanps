@@ -144,7 +144,7 @@
     const item = ([e, i]) => { const [c, bg] = zona(e.nps); return `<div class="item ${i === sel ? 'on' : ''}" data-i="${i}">
       <div class="av ${e.tipo === 'TL' ? 'tl' : 'g'}">${esc(ini(e.nome))}</div>
       <div class="t"><b>${esc(e.nome)}</b><span>${esc(e.tipo === 'TL' ? 'TL · ' + e.time : e.time)}</span></div>
-      <span class="nps" style="color:${c};background:${bg}" title="NPS do período ${esc(D.rotulo)}">${fmt(e.nps)}</span></div>`; };
+      <span class="nps" style="color:${c};background:${bg}" title="NPS do semestre em destaque (Painel da Agilidade)">${fmt(e.nps)}</span></div>`; };
     $('main').innerHTML = `<div class="side">
         <h3>TLs · ${tls.length}</h3><div class="list" style="flex:none">${tls.map(item).join('') || '<div class="empty">Nenhum</div>'}</div>
         <h3>Gestores · ${gs.length}</h3><div class="list">${gs.map(item).join('') || '<div class="empty">Nenhum</div>'}</div>
