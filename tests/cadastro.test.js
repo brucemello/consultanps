@@ -106,4 +106,21 @@ t('período escolhido na tela (jul a out)', () => {
   assert.strictEqual(r.total.base, 3); // só outubro
 });
 
+t('NPS por semestre (1º jan–jun, 2º jul–dez, parcial até o mês fechado)', () => {
+  vm.runInContext(`var REGS2 = registrosDeBase_([
+    L('2026-02-10', 'SIGAFIS', 10), L('2026-03-10', 'SIGAFIS', 2), L('2026-06-10', 'SIGAFIS', 10), L('2026-06-11', 'SIGAFIS', 9),
+    L('2026-07-10', 'SIGAFIS', 3), L('2026-10-10', 'SIGAFIS', 10), L('2026-11-10', 'SIGAFIS', 0)
+  ], FILTROS_PADRAO);`, ctx);
+  const sm = run(`resumoModulos_(REGS2, ['SIGAFIS'], '2026-07', '2026-10').semestres`);
+  assert.strictEqual(sm.ano, '2026');
+  assert.strictEqual(sm.h1.base, 4); assert.strictEqual(sm.h1.nps, 50);        // 3P 1D de 4 — junho entra no 1º
+  assert.strictEqual(sm.h2.base, 2); assert.strictEqual(sm.h2.nps, 0);         // jul+out; novembro (depois do mês fechado) fica fora
+  assert.strictEqual(sm.h2.parcial, true); assert.strictEqual(sm.h2.fim, '2026-10');
+  assert.strictEqual(sm.variacao, -50);
+  const mar = run(`resumoModulos_(REGS2, ['SIGAFIS'], '2026-01', '2026-03').semestres`);
+  assert.strictEqual(mar.h1.parcial, true); assert.strictEqual(mar.h2.futuro, true); assert.strictEqual(mar.h2.nps, null);
+  const html = run(`blocoSemestres_(resumoModulos_(REGS2, ['SIGAFIS'], '2026-07', '2026-10').semestres)`);
+  assert.ok(html.includes('1º semestre') && html.includes('2º semestre') && html.includes('jul a out/26 · parcial'));
+});
+
 console.log(`cadastro.test.js: ${ok} testes ok`);

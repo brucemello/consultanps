@@ -229,12 +229,28 @@ function resumoModulos_(regs, modulos, mesIni, mesFim) {
   const elogios = periodo.filter(r => r.com && r.cl === 'Promotor').sort((a, b) => b.dia.localeCompare(a.dia));
 
   return {
+    semestres: semestresDoAno_(doTime, mesFim),
     modulos: modulos, total: s, ultimo: Object.assign({ mes: mesFim }, ult), anterior: Object.assign({ mes: mesAnt }, ant),
     variacao: ult.nps != null && ant.nps != null ? ult.nps - ant.nps : null,
     serie: serie, melhor: melhor, pior: pior, causas: causas,
     detratores: detUnicos.slice(0, 5), totalDetratoresComentario: totalDetCom,
     elogio: elogios[0] || null
   };
+}
+
+/**
+ * NPS por semestre do ano do mês fechado: 1º (jan–jun) e 2º (jul–dez).
+ * Meses depois de mesFim não entram; o semestre em andamento fica marcado como parcial.
+ */
+function semestresDoAno_(regs, mesFim) {
+  const ano = mesFim.slice(0, 4);
+  const sem = (ini, fimSem) => {
+    const fim = fimSem < mesFim ? fimSem : mesFim;
+    const st = ini > mesFim ? estatisticas_([]) : estatisticas_(regs.filter(r => r.mes >= ini && r.mes <= fim));
+    return Object.assign(st, { ini: ini, fim: ini > mesFim ? fimSem : fim, futuro: ini > mesFim, parcial: ini <= mesFim && fim < fimSem });
+  };
+  const h1 = sem(`${ano}-01`, `${ano}-06`), h2 = sem(`${ano}-07`, `${ano}-12`);
+  return { ano: ano, h1: h1, h2: h2, variacao: h1.nps != null && h2.nps != null ? h2.nps - h1.nps : null };
 }
 
 /** Monta a lista de e-mails (um por TL e um por gestor) a partir do cadastro. */
@@ -381,6 +397,24 @@ function moldura_(eyebrow, titulo, sub, corpo, links) {
   </table></td></tr></table></body></html>`;
 }
 
+function blocoSemestres_(sm) {
+  const caixa = (titulo, st, lado) => {
+    const z = zonaNps_(st.nps);
+    const faixa = st.futuro ? `a partir de ${MESES_CURTOS[+st.ini.slice(5) - 1]}/${sm.ano.slice(2)}`
+      : `${MESES_CURTOS[+st.ini.slice(5) - 1]} a ${MESES_CURTOS[+st.fim.slice(5) - 1]}/${sm.ano.slice(2)}${st.parcial ? ' · parcial' : ''}`;
+    return `<td width="50%" valign="top" style="padding:0 ${lado === 'e' ? '6px 0 0' : '0 0 6px'}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${EM.line};border-radius:10px;border-top:3px solid ${st.nps == null ? EM.line : z.cor}"><tr><td style="${EM.font};padding:12px 14px">
+      <div style="font-size:12px;color:${EM.ink2};font-weight:700">${titulo}</div>
+      <div style="font-size:11.5px;color:${EM.muted};margin-top:2px">${faixa}</div>
+      <div style="font-size:30px;line-height:1.1;font-weight:800;color:${st.nps == null ? EM.muted : z.cor};margin:8px 0 6px">${fmtNps_(st.nps)}</div>
+      <div style="font-size:12px;color:${EM.muted}">${st.futuro ? 'ainda sem respostas' : `${fmtInt_(st.base)} respostas com nota · ${z.nome.toLowerCase()}`}</div>
+    </td></tr></table></td>`;
+  };
+  const v = sm.variacao;
+  const comp = v == null ? '' : `<div style="${EM.font};margin-top:12px;font-size:12.5px;color:${EM.ink2}">2º semestre ${sm.h2.parcial ? '(até agora) ' : ''}vs 1º semestre: ${blocoVariacao_(v, '').replace(/<span style="color:[^"]*;font-size:12px;margin-left:4px">vs <\/span>/, '')}</div>`;
+  return cartao_(`NPS por semestre · ${sm.ano}`, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    ${caixa('1º semestre', sm.h1, 'e')}${caixa('2º semestre', sm.h2, 'd')}</tr></table>${comp}`);
+}
+
 function destaqueNps_(r, periodo) {
   const zu = zonaNps_(r.ultimo.nps), zt = zonaNps_(r.total.nps);
   return `<tr><td style="padding:0 24px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -413,6 +447,7 @@ function htmlEmailTime_(t, r, periodo, links) {
   const ola = t.tl ? `Olá, ${escHtml_(t.tl.split(' ')[0])}! ` : '';
   let corpo = `<tr><td style="padding:0 24px 16px;${EM.font};font-size:14px;color:${EM.ink2};line-height:1.55">${ola}Segue o resumo do NPS do time <b>${escHtml_(t.time)}</b> (${escHtml_(t.modulos.join(', '))}) no período de <b>${rotuloPeriodo_(periodo)}</b>.</td></tr>`;
   corpo += destaqueNps_(r, periodo);
+  corpo += blocoSemestres_(r.semestres);
   corpo += cartao_('Composição das respostas no período', barraMix_(r.total) || `<span style="${EM.font};font-size:13px;color:${EM.muted}">Sem respostas no período.</span>`);
   const sp = sparkMeses_(r.serie), dt = destaquesTexto_(r);
   if (sp || dt) corpo += cartao_('Evolução mês a mês', sp + (dt ? `<div style="margin-top:12px">${dt}</div>` : ''));
@@ -426,6 +461,7 @@ function htmlEmailGestor_(g, itens, consolidado, periodo, links) {
   const ola = `Olá, ${escHtml_(g.nome.split(' ')[0])}! `;
   let corpo = `<tr><td style="padding:0 24px 16px;${EM.font};font-size:14px;color:${EM.ink2};line-height:1.55">${ola}Segue o consolidado do NPS de <b>${itens.length} time${itens.length > 1 ? 's' : ''}</b> no período de <b>${rotuloPeriodo_(periodo)}</b>.</td></tr>`;
   corpo += destaqueNps_(consolidado, periodo);
+  corpo += blocoSemestres_(consolidado.semestres);
 
   const ord = itens.slice().sort((a, b) => (b.r.ultimo.nps == null ? -999 : b.r.ultimo.nps) - (a.r.ultimo.nps == null ? -999 : a.r.ultimo.nps));
   const th = (t, al) => `<td align="${al || 'left'}" style="${EM.font};font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:${EM.muted};font-weight:700;padding:8px 6px;border-bottom:1px solid ${EM.line}">${t}</td>`;
@@ -436,11 +472,12 @@ function htmlEmailGestor_(g, itens, consolidado, periodo, links) {
       <td align="center" style="padding:10px 6px;border-bottom:1px solid ${EM.line}"><span style="${EM.font};display:inline-block;background:${z.bg};color:${z.cor};font-weight:800;font-size:14px;padding:4px 10px;border-radius:8px">${fmtNps_(r.ultimo.nps)}</span></td>
       <td align="center" style="${EM.font};font-size:12.5px;font-weight:700;padding:10px 6px;border-bottom:1px solid ${EM.line};color:${v == null ? EM.muted : v >= 0 ? EM.prom : EM.det}">${v == null ? '—' : (v >= 0 ? '▲ ' : '▼ ') + fmtNps_(Math.abs(v))}</td>
       <td align="center" style="${EM.font};font-size:13px;color:${EM.ink2};padding:10px 6px;border-bottom:1px solid ${EM.line}">${fmtNps_(r.total.nps)}</td>
-      <td align="center" style="${EM.font};font-size:13px;color:${EM.ink2};padding:10px 6px;border-bottom:1px solid ${EM.line}">${fmtInt_(r.total.base)}</td>
+      <td align="center" style="${EM.font};font-size:13px;color:${EM.ink2};padding:10px 6px;border-bottom:1px solid ${EM.line}">${fmtNps_(r.semestres.h1.nps)}</td>
+      <td align="center" style="${EM.font};font-size:13px;color:${EM.ink2};padding:10px 6px;border-bottom:1px solid ${EM.line}">${fmtNps_(r.semestres.h2.nps)}</td>
       <td align="center" style="${EM.font};font-size:13px;color:${EM.det};font-weight:600;padding:10px 6px;border-bottom:1px solid ${EM.line}">${fmtInt_(r.total.D)}</td></tr>`;
   }).join('');
   corpo += cartao_('Ranking dos times', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>
-    ${th('Time')}${th(mesCurto_(periodo.mesFim), 'center')}${th('Var.', 'center')}${th('Período', 'center')}${th('Respostas', 'center')}${th('Detratores', 'center')}</tr>${linhas}</table>`);
+    ${th('Time')}${th(mesCurto_(periodo.mesFim), 'center')}${th('Var.', 'center')}${th('Período', 'center')}${th('1º sem.', 'center')}${th('2º sem.', 'center')}${th('Detr.', 'center')}</tr>${linhas}</table>`);
 
   const atencao = ord.filter(x => (x.r.variacao != null && x.r.variacao <= -10) || (x.r.ultimo.nps != null && x.r.ultimo.nps < 0));
   const alertas = atencao.map(({ t, r }) => {
